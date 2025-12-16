@@ -1,26 +1,31 @@
 "use strict";
-// Example TypeScript file with unused imports
+// Example JavaScript file with unused imports
 // Use this to test the Smart Import Cleaner extension
-Object.defineProperty(exports, "__esModule", { value: true });
-const react_1 = require("react");
+
+const React = require("react");
+const { useState, useEffect, useMemo, useCallback } = require("react");
+const axios = require("axios");
+const { debounce, throttle, isEmpty } = require("lodash");
+const moment = require("moment");
+
 // Only useState is actually used
 function Counter() {
-    const [count, setCount] = (0, react_1.useState)(0);
-    return Count;
-    {
-        count;
-    }
-    /p>
-        < button;
-    onClick = {}();
-    setCount(count + 1);
+  const [count, setCount] = useState(0);
+
+  return React.createElement(
+    "div",
+    null,
+    React.createElement("p", null, "Count: ", count),
+    React.createElement(
+      "button",
+      { onClick: () => setCount(count + 1) },
+      "Increment"
+    )
+  );
 }
- >
-    Increment
-    < /button>
-    < /div>;
-;
-exports.default = Counter;
+
+module.exports = Counter;
+
 // Unused imports in this file:
 // - useEffect
 // - useMemo
@@ -30,4 +35,3 @@ exports.default = Counter;
 // - throttle
 // - isEmpty
 // - moment
-//# sourceMappingURL=example.js.map

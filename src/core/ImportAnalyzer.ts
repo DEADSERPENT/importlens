@@ -66,22 +66,42 @@ export class ImportAnalyzer {
 
           const line = document.lineAt(lineNumber);
 
-          // Check if this is an import statement
+          // Find the import statement line (could be current line or earlier for multiline imports)
+          let importLineNumber = lineNumber;
           if (!adapter.isImportStatement(line.text)) {
-            continue;
+            // The diagnostic might be on a specifier within a multiline import
+            // Search backward to find the import statement start
+            let foundImportStart = false;
+            for (let i = lineNumber - 1; i >= Math.max(0, lineNumber - 20); i--) {
+              const prevLine = document.lineAt(i);
+              if (adapter.isImportStatement(prevLine.text)) {
+                importLineNumber = i;
+                foundImportStart = true;
+                break;
+              }
+              // Stop searching if we hit a blank line or clearly non-import line
+              const trimmed = prevLine.text.trim();
+              if (trimmed === '' || (trimmed.endsWith(';') && !trimmed.includes('import'))) {
+                break;
+              }
+            }
+            if (!foundImportStart) {
+              continue;
+            }
           }
 
           // Parse the import (try multiline first if supported)
           let importInfo: ImportInfo | null = null;
           if (adapter.parseMultilineImport) {
             try {
-              importInfo = adapter.parseMultilineImport(document, lineNumber);
+              importInfo = adapter.parseMultilineImport(document, importLineNumber);
             } catch (error) {
-              console.error(`Error parsing multiline import at line ${lineNumber}:`, error);
+              console.error(`Error parsing multiline import at line ${importLineNumber}:`, error);
             }
           }
           if (!importInfo) {
-            importInfo = adapter.parseImport(line.text, lineNumber);
+            const importLine = document.lineAt(importLineNumber);
+            importInfo = adapter.parseImport(importLine.text, importLineNumber);
           }
           if (!importInfo) {
             continue;
