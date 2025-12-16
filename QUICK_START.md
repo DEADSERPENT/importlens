@@ -162,7 +162,7 @@ npm install -g @vscode/vsce
 vsce package
 
 # Install the packaged extension
-code --install-extension smart-import-cleaner-0.0.1.vsix
+code --install-extension smart-import-cleaner-1.0.0.vsix
 ```
 
 ## Next Steps

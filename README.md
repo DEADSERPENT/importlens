@@ -9,15 +9,22 @@ ImportLens helps you **understand why an import is unused before removing it**, 
 ## ✨ Features
 
 ### 🎯 **Multi-Language Support**
-Dedicated adapters for **TypeScript, JavaScript, Python, Java, Go, Rust** + generic LSP support for 50+ languages.
+Dedicated adapters for **TypeScript, JavaScript, Python, Java, Go, Rust, C/C++** + generic LSP support for 50+ languages.
 
 ### 🛡️ **Safe Mode (Default)**
 Automatically preserves side-effect imports like CSS files, polyfills, test setup, and database drivers.
 
-### 📊 **Explainable Results**
+### 📊 **Visual Statistics Dashboard**
+Interactive dashboard with:
+- Real-time charts (by language, confidence level)
+- Import usage heatmap showing top files
+- Comprehensive metrics and insights
+- Exportable data and refresh capabilities
+
+### 💡 **Explainable Results**
 Hover over any unused import to see:
 - **Why** it's unused (never referenced, shadowed, type-only, etc.)
-- **Source** (TypeScript LSP, Pylance, gopls, etc.)
+- **Source** (TypeScript LSP, Pylance, gopls, clangd, etc.)
 - **Side effects** detected
 - **Safety rating** (safe to remove vs. aggressive mode only)
 
@@ -78,6 +85,7 @@ Enable: `importlens.enableOnSave`
 | **Java** | ✅ Full | Regular, static, star | JUnit, Mockito |
 | **Go** | ✅ Full | Single, grouped, blank | Database drivers |
 | **Rust** | ✅ Full | `use`, grouped, glob | Macros, prelude |
+| **C/C++** | ✅ Full | `#include <>`, `#include ""` | iostream, test frameworks |
 | **50+ Others** | ✅ Generic | Keyword detection | Conservative |
 
 ---
@@ -142,12 +150,12 @@ import _ "database/sql/driver"
 
 | Feature | ImportLens | Others |
 |---------|-----------|--------|
-| **Multi-language** | ✅ 6 dedicated + 50 generic | ❌ TS/JS only |
+| **Multi-language** | ✅ 7 dedicated + 50 generic | ❌ TS/JS only |
 | **Explainable** | ✅ Shows why unused | ❌ Silent |
+| **Visual dashboard** | ✅ Charts + heatmap | ❌ No |
 | **Side-effect detection** | ✅ Language-aware | ⚠️ Basic |
 | **Diff preview** | ✅ Visual | ❌ No |
 | **Cancellable** | ✅ Yes | ❌ No |
-| **Optimized** | ✅ Debounced + cached | ⚠️ Basic |
 
 ---
 

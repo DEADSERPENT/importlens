@@ -5,10 +5,12 @@ import { PythonAdapter } from './adapters/PythonAdapter';
 import { JavaAdapter } from './adapters/JavaAdapter';
 import { GoAdapter } from './adapters/GoAdapter';
 import { RustAdapter } from './adapters/RustAdapter';
+import { CppAdapter } from './adapters/CppAdapter';
 import { GenericLSPAdapter } from './adapters/GenericLSPAdapter';
 import { ImportAnalyzer } from './core/ImportAnalyzer';
 import { SafeEditExecutor } from './core/SafeEditExecutor';
 import { DiagnosticListener } from './core/DiagnosticListener';
+import { StatisticsPanel } from './ui/StatisticsPanel';
 
 let diagnosticListener: DiagnosticListener | null = null;
 let analyzer: ImportAnalyzer | null = null;
@@ -27,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
   adapterRegistry.register(new JavaAdapter());
   adapterRegistry.register(new GoAdapter());
   adapterRegistry.register(new RustAdapter());
+  adapterRegistry.register(new CppAdapter());
   adapterRegistry.register(new GenericLSPAdapter(), true); // Generic fallback
 
   // Initialize core components
@@ -173,39 +176,8 @@ function registerCommands(context: vscode.ExtensionContext) {
         return;
       }
 
-      // Get all text documents
-      const documents = vscode.workspace.textDocuments.filter(doc =>
-        !doc.isUntitled && doc.uri.scheme === 'file'
-      );
-
-      // Analyze all documents
-      const allUnusedImports: any[] = [];
-      for (const document of documents) {
-        const unusedImports = await analyzer.findUnusedImports(document);
-        allUnusedImports.push(...unusedImports);
-      }
-
-      // Get statistics
-      const stats = analyzer.getStatistics(allUnusedImports);
-
-      // Create output channel
-      const output = vscode.window.createOutputChannel('ImportLens Statistics');
-      output.clear();
-      output.appendLine('ImportLens Statistics');
-      output.appendLine('═'.repeat(50));
-      output.appendLine('');
-      output.appendLine(`Total unused imports found: ${stats.total}`);
-      output.appendLine(`Safe to remove: ${stats.safeToRemove}`);
-      output.appendLine(`With side effects: ${stats.withSideEffects}`);
-      output.appendLine('');
-      output.appendLine('By Confidence Level:');
-      output.appendLine(`  High (>90%): ${stats.byConfidence.high}`);
-      output.appendLine(`  Medium (70-90%): ${stats.byConfidence.medium}`);
-      output.appendLine(`  Low (<70%): ${stats.byConfidence.low}`);
-      output.appendLine('');
-      output.appendLine(`Files analyzed: ${documents.length}`);
-
-      output.show();
+      // Show the enhanced statistics panel with charts and visualizations
+      StatisticsPanel.createOrShow(context, analyzer);
     }
   );
 

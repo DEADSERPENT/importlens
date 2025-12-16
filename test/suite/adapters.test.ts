@@ -5,6 +5,7 @@ import { PythonAdapter } from '../../src/adapters/PythonAdapter';
 import { JavaAdapter } from '../../src/adapters/JavaAdapter';
 import { GoAdapter } from '../../src/adapters/GoAdapter';
 import { RustAdapter } from '../../src/adapters/RustAdapter';
+import { CppAdapter } from '../../src/adapters/CppAdapter';
 
 suite('Language Adapter Tests', () => {
 	suite('TypeScriptAdapter', () => {
@@ -206,6 +207,92 @@ suite('Language Adapter Tests', () => {
 				range: new vscode.Range(0, 0, 0, 20)
 			};
 			assert.ok(adapter.hasSideEffects(importInfo));
+		});
+	});
+
+	suite('CppAdapter', () => {
+		const adapter = new CppAdapter();
+
+		test('Should handle C and C++', () => {
+			assert.ok(adapter.canHandle('c'));
+			assert.ok(adapter.canHandle('cpp'));
+			assert.ok(adapter.canHandle('cuda-cpp'));
+			assert.ok(!adapter.canHandle('java'));
+		});
+
+		test('Should detect include statements', () => {
+			assert.ok(adapter.isImportStatement("#include <iostream>"));
+			assert.ok(adapter.isImportStatement('#include "myheader.h"'));
+			assert.ok(adapter.isImportStatement("  #  include  <vector>"));
+			assert.ok(!adapter.isImportStatement("int main() {}"));
+		});
+
+		test('Should parse system header includes', () => {
+			const result = adapter.parseImport("#include <iostream>", 0);
+			assert.ok(result);
+			assert.strictEqual(result.type, 'default');
+			assert.deepStrictEqual(result.symbols, ['iostream']);
+			assert.strictEqual(result.module, 'iostream');
+		});
+
+		test('Should parse local header includes', () => {
+			const result = adapter.parseImport('#include "myheader.h"', 0);
+			assert.ok(result);
+			assert.strictEqual(result.type, 'side-effect');
+			assert.deepStrictEqual(result.symbols, ['myheader']);
+			assert.strictEqual(result.module, 'myheader.h');
+		});
+
+		test('Should parse path-based includes', () => {
+			const result = adapter.parseImport("#include <boost/algorithm/string.hpp>", 0);
+			assert.ok(result);
+			assert.strictEqual(result.type, 'default');
+			assert.deepStrictEqual(result.symbols, ['string']);
+			assert.strictEqual(result.module, 'boost/algorithm/string.hpp');
+		});
+
+		test('Should detect side effects in local headers', () => {
+			const importInfo = {
+				type: 'side-effect' as const,
+				symbols: ['config'],
+				module: 'config.h',
+				fullText: '#include "config.h"',
+				range: new vscode.Range(0, 0, 0, 20)
+			};
+			assert.ok(adapter.hasSideEffects(importInfo));
+		});
+
+		test('Should detect side effects in iostream', () => {
+			const importInfo = {
+				type: 'default' as const,
+				symbols: ['iostream'],
+				module: 'iostream',
+				fullText: '#include <iostream>',
+				range: new vscode.Range(0, 0, 0, 19)
+			};
+			assert.ok(adapter.hasSideEffects(importInfo));
+		});
+
+		test('Should detect side effects in test headers', () => {
+			const importInfo = {
+				type: 'default' as const,
+				symbols: ['gtest'],
+				module: 'gtest/gtest.h',
+				fullText: '#include <gtest/gtest.h>',
+				range: new vscode.Range(0, 0, 0, 24)
+			};
+			assert.ok(adapter.hasSideEffects(importInfo));
+		});
+
+		test('Should not detect side effects in pure utility headers', () => {
+			const importInfo = {
+				type: 'default' as const,
+				symbols: ['vector'],
+				module: 'vector',
+				fullText: '#include <vector>',
+				range: new vscode.Range(0, 0, 0, 17)
+			};
+			assert.ok(!adapter.hasSideEffects(importInfo));
 		});
 	});
 });

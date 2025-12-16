@@ -2,7 +2,7 @@
   "name": "importlens",
   "displayName": "ImportLens",
   "description": "Explainable, safe import cleanup for VS Code using LSP diagnostics",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
@@ -34,6 +34,9 @@
     "java",
     "rust",
     "go",
+    "cpp",
+    "c++",
+    "c",
     "lsp",
     "diagnostics",
     "lens"

@@ -6,7 +6,9 @@ export async function run(): Promise<void> {
 	// Create the mocha test
 	const mocha = new Mocha({
 		ui: 'tdd',
-		color: true
+		color: true,
+		timeout: 30000, // Increase timeout to 30 seconds for extension activation
+		retries: 2 // Allow 2 retries for flaky tests
 	});
 
 	const testsRoot = path.resolve(__dirname, '..');

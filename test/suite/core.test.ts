@@ -86,17 +86,47 @@ suite('Core Component Tests', () => {
 	});
 
 	suite('Integration Tests', () => {
-		test('Extension should be present', () => {
-			const ext = vscode.extensions.getExtension('DEADSERPENT.importlens');
-			assert.ok(ext);
+		/**
+		 * Wait for extension to be activated with retry logic
+		 */
+		async function waitForExtension(extensionId: string, maxAttempts = 10): Promise<vscode.Extension<any> | undefined> {
+			for (let i = 0; i < maxAttempts; i++) {
+				const extension = vscode.extensions.getExtension(extensionId);
+				if (extension) {
+					// Wait for activation if not already active
+					if (!extension.isActive) {
+						try {
+							await extension.activate();
+						} catch (error) {
+							console.log(`Activation attempt ${i + 1} failed:`, error);
+						}
+					}
+					if (extension.isActive) {
+						return extension;
+					}
+				}
+				// Wait 1 second before retrying
+				await new Promise(resolve => setTimeout(resolve, 1000));
+			}
+			return undefined;
+		}
+
+		test('Extension should be present', async () => {
+			const ext = await waitForExtension('DEADSERPENT.importlens');
+			assert.ok(ext, 'Extension should be loaded');
+			assert.ok(ext.isActive, 'Extension should be active');
 		});
 
 		test('Commands should be registered', async () => {
+			// Ensure extension is activated first
+			const ext = await waitForExtension('DEADSERPENT.importlens');
+			assert.ok(ext, 'Extension should be loaded before checking commands');
+
 			const commands = await vscode.commands.getCommands();
-			assert.ok(commands.includes('importlens.cleanFile'));
-			assert.ok(commands.includes('importlens.cleanWorkspace'));
-			assert.ok(commands.includes('importlens.showStats'));
-			assert.ok(commands.includes('importlens.toggleSafeMode'));
+			assert.ok(commands.includes('importlens.cleanFile'), 'cleanFile command should be registered');
+			assert.ok(commands.includes('importlens.cleanWorkspace'), 'cleanWorkspace command should be registered');
+			assert.ok(commands.includes('importlens.showStats'), 'showStats command should be registered');
+			assert.ok(commands.includes('importlens.toggleSafeMode'), 'toggleSafeMode command should be registered');
 		});
 	});
 });
