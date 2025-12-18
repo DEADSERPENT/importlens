@@ -15,6 +15,7 @@ import { StatisticsPanel } from './ui/StatisticsPanel';
 let diagnosticListener: DiagnosticListener | null = null;
 let analyzer: ImportAnalyzer | null = null;
 let executor: SafeEditExecutor | null = null;
+let statusBarItem: vscode.StatusBarItem;
 
 /**
  * Extension activation
@@ -35,13 +36,26 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize core components
   analyzer = new ImportAnalyzer(adapterRegistry);
   executor = new SafeEditExecutor(adapterRegistry);
-  diagnosticListener = new DiagnosticListener(analyzer);
+  diagnosticListener = new DiagnosticListener(analyzer, updateStatusBar);
+
+  // Initialize status bar
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBarItem.command = 'importlens.cleanFile';
+  context.subscriptions.push(statusBarItem);
+
+  // Listen for editor changes to update status bar
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(updateStatusBar)
+  );
 
   // Register commands
   registerCommands(context);
 
   // Register save listener if enabled
   registerSaveListener(context);
+
+  // Initial status bar update
+  updateStatusBar();
 
   vscode.window.showInformationMessage('ImportLens activated! 🔍');
 }
@@ -52,6 +66,47 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   if (diagnosticListener) {
     diagnosticListener.dispose();
+  }
+}
+
+/**
+ * Update the status bar with current file's unused import count
+ */
+async function updateStatusBar(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor || !analyzer) {
+    statusBarItem.hide();
+    return;
+  }
+
+  try {
+    const config = vscode.workspace.getConfiguration('importlens');
+    const showStatusBar = config.get<boolean>('showStatusBar', true);
+
+    if (!showStatusBar) {
+      statusBarItem.hide();
+      return;
+    }
+
+    const unusedImports = await analyzer.findUnusedImports(editor.document);
+    const count = unusedImports.length;
+
+    if (count > 0) {
+      statusBarItem.text = `$(trash) ${count} unused import${count > 1 ? 's' : ''}`;
+      statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+      statusBarItem.tooltip = `ImportLens: Click to clean ${count} unused import${count > 1 ? 's' : ''}`;
+      statusBarItem.show();
+    } else {
+      statusBarItem.text = `$(check) Imports Clean`;
+      statusBarItem.backgroundColor = undefined;
+      statusBarItem.tooltip = 'ImportLens: No unused imports found';
+      statusBarItem.show();
+    }
+  } catch (error) {
+    // Hide status bar on error
+    statusBarItem.hide();
+    console.error('Error updating status bar:', error);
   }
 }
 
@@ -92,6 +147,9 @@ function registerCommands(context: vscode.ExtensionContext) {
         showDiff,
         requireConfirmation: true
       });
+
+      // Refresh status bar after cleaning
+      await updateStatusBar();
     }
   );
 

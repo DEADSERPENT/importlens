@@ -45,6 +45,9 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "bin": {
+    "importlens-cli": "./out/cli.js"
+  },
   "contributes": {
     "commands": [
       {
@@ -92,6 +95,11 @@
           "default": true,
           "description": "Show explanation tooltips for unused imports"
         },
+        "importlens.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show unused import count in the status bar"
+        },
         "importlens.safeMode": {
           "type": "boolean",
           "default": true,
@@ -134,7 +142,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "node ./out/test/runTest.js",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "cli": "node ./out/cli.js",
+    "setup:hooks": "node -e \"require('fs').copyFileSync('./templates/pre-commit-hook.sh', '.git/hooks/pre-commit'); require('fs').chmodSync('.git/hooks/pre-commit', '755'); console.log('Pre-commit hook installed!')\"",
+    "setup:precommit": "cp ./templates/.pre-commit-config.yaml ./.pre-commit-config.yaml && echo 'Pre-commit config installed! Run: pre-commit install'"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

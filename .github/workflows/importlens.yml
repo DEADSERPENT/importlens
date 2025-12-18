@@ -1,0 +1,77 @@
+# ImportLens CI/CD Workflow
+# This workflow checks for unused imports in your codebase
+
+name: ImportLens Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  check-imports:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ImportLens
+        run: npm install -g importlens
+
+      - name: Check for unused imports
+        run: |
+          npx importlens-cli --check --format=github src/
+        continue-on-error: false
+
+      # Optional: Generate JSON report as artifact
+      - name: Generate JSON Report
+        if: always()
+        run: |
+          npx importlens-cli --check --format=json src/ > importlens-report.json
+        continue-on-error: true
+
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: importlens-report
+          path: importlens-report.json
+          retention-days: 30
+
+      # Optional: Comment on PR with results
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('importlens-report.json', 'utf8'));
+
+            const comment = `## ImportLens Analysis Results
+
+            ⚠️ **Found ${report.totalUnusedImports} unused import(s) in ${report.filesWithIssues} file(s)**
+
+            Please review and clean up unused imports before merging.
+
+            <details>
+            <summary>View Details</summary>
+
+            \`\`\`json
+            ${JSON.stringify(report, null, 2)}
+            \`\`\`
+
+            </details>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

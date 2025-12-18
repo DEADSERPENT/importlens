@@ -1,0 +1,28 @@
+# Pre-commit configuration for ImportLens
+# See https://pre-commit.com for more information
+
+# To use this:
+# 1. Install pre-commit: pip install pre-commit
+# 2. Copy this file to your project root as .pre-commit-config.yaml
+# 3. Install the hook: pre-commit install
+# 4. (Optional) Run on all files: pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: importlens
+        name: ImportLens - Check Unused Imports
+        entry: npx importlens-cli --check
+        language: system
+        types_or: [javascript, jsx, ts, tsx, python, java, go, rust, c, c++]
+        pass_filenames: true
+        description: 'Checks for unused imports using ImportLens'
+
+      # Optional: Auto-fix mode (use with caution)
+      # - id: importlens-fix
+      #   name: ImportLens - Auto-fix Unused Imports
+      #   entry: npx importlens-cli --fix --safe-mode
+      #   language: system
+      #   types_or: [javascript, jsx, ts, tsx, python, java, go, rust, c, c++]
+      #   pass_filenames: true
+      #   description: 'Automatically removes unused imports using ImportLens (safe mode)'

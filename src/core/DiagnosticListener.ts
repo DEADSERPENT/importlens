@@ -12,7 +12,10 @@ export class DiagnosticListener {
   private readonly DEBOUNCE_DELAY = 500; // ms
   private readonly CACHE_TTL = 5000; // ms
 
-  constructor(private analyzer: ImportAnalyzer) {
+  constructor(
+    private analyzer: ImportAnalyzer,
+    private onUpdate?: () => void | Promise<void>
+  ) {
     // Create decoration type for dimming unused imports
     this.decorationType = vscode.window.createTextEditorDecorationType({
       opacity: '0.5',
@@ -76,6 +79,11 @@ export class DiagnosticListener {
               if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
                 // Use cached result
                 this.updateDecorations(document, cached.imports);
+
+                // Trigger status bar update
+                if (this.onUpdate) {
+                  await this.onUpdate();
+                }
                 return;
               }
 
@@ -90,6 +98,11 @@ export class DiagnosticListener {
 
               // Update decorations
               this.updateDecorations(document, unusedImports);
+
+              // Trigger status bar update
+              if (this.onUpdate) {
+                await this.onUpdate();
+              }
             } catch (error) {
               console.error(`Error processing diagnostic change for ${uri.fsPath}:`, error);
             } finally {
