@@ -169,4 +169,28 @@ Source: ${diagnostic.source || 'gopls'}
 Side effects: ${hasSideEffects ? 'Yes (will be preserved in Safe Mode)' : 'No'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // Go imports are single-package per line (similar to Java)
+    // Each import statement imports one package
+
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null; // Delete entire line
+    }
+
+    // For dot imports or namespace imports, keep if any symbol is used
+    if (importInfo.type === 'namespace') {
+      return importInfo.fullText;
+    }
+
+    // Calculate symbols to keep
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // Go imports are single-package, so if we're keeping any symbol, keep the import as-is
+    return importInfo.fullText;
+  }
 }

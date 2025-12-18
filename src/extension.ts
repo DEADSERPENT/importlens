@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize core components
   analyzer = new ImportAnalyzer(adapterRegistry);
-  executor = new SafeEditExecutor();
+  executor = new SafeEditExecutor(adapterRegistry);
   diagnosticListener = new DiagnosticListener(analyzer);
 
   // Register commands

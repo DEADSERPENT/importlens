@@ -180,4 +180,43 @@ Source: ${diagnostic.source || 'Pylance'}
 Side effects: ${hasSideEffects ? 'Yes (will be preserved in Safe Mode)' : 'No'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // If no specific unused symbols, or if all symbols are unused, delete the entire import
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null;
+    }
+
+    // Calculate which symbols to keep
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // Handle different import types
+    switch (importInfo.type) {
+      case 'named': {
+        // Python: from module import X, Y, Z
+        return `from ${importInfo.module} import ${symbolsToKeep.join(', ')}`;
+      }
+
+      case 'default':
+        // Python: import module
+        // If we're keeping some modules, reconstruct
+        return `import ${symbolsToKeep.join(', ')}`;
+
+      case 'namespace':
+        // Python: from module import *
+        // Can't do partial removal on star imports
+        return importInfo.fullText;
+
+      case 'side-effect':
+        // Side-effect imports don't have symbols
+        return importInfo.fullText;
+
+      default:
+        return null;
+    }
+  }
 }

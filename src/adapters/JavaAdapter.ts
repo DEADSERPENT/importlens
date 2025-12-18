@@ -116,4 +116,29 @@ Source: ${diagnostic.source || 'Java Language Server'}
 Side effects: ${hasSideEffects ? 'Possible (will be preserved in Safe Mode)' : 'No'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // Java imports are typically single-class per line
+    // If any symbol is unused, we delete the entire import
+    // (Java doesn't support multi-symbol imports like TypeScript)
+
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null; // Delete entire line
+    }
+
+    // For star imports or namespace imports, keep them if any symbol is still used
+    if (importInfo.type === 'namespace') {
+      return importInfo.fullText;
+    }
+
+    // For single imports, if the symbol is in unusedSymbols, delete it
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // Java imports are single-class, so if we're keeping it, return as-is
+    return importInfo.fullText;
+  }
 }

@@ -18,6 +18,8 @@ export interface UnusedImport {
   confidence: number;
   /** The document URI */
   uri: vscode.Uri;
+  /** Specific symbols that are unused (for partial removal). If empty, the entire import is unused */
+  unusedSymbols: string[];
 }
 
 /**
@@ -116,13 +118,17 @@ export class ImportAnalyzer {
           // Calculate confidence
           const confidence = this.calculateConfidence(diagnostic, importInfo, hasSideEffects);
 
+          // Extract specific unused symbols from the diagnostic
+          const unusedSymbols = this.extractUnusedSymbols(document, diagnostic, importInfo);
+
           unusedImports.push({
             importInfo,
             diagnostic,
             hasSideEffects,
             explanation,
             confidence,
-            uri: document.uri
+            uri: document.uri,
+            unusedSymbols
           });
         } catch (error) {
           console.error(`Error analyzing diagnostic at line ${lineNumber}:`, error);
@@ -204,6 +210,53 @@ export class ImportAnalyzer {
     }
 
     return Math.max(0, Math.min(1, confidence));
+  }
+
+  /**
+   * Extract specific unused symbols from a diagnostic
+   * @param document The text document
+   * @param diagnostic The diagnostic
+   * @param importInfo The import information
+   * @returns Array of unused symbol names, or empty array if entire import is unused
+   */
+  private extractUnusedSymbols(
+    document: vscode.TextDocument,
+    diagnostic: vscode.Diagnostic,
+    importInfo: ImportInfo
+  ): string[] {
+    // For side-effect imports, the entire import is unused
+    if (importInfo.type === 'side-effect') {
+      return [];
+    }
+
+    // Get the text that the diagnostic points to
+    const diagnosticText = document.getText(diagnostic.range).trim();
+
+    // Try to match the diagnostic text to a specific symbol
+    // This handles cases like: "'useState' is declared but never used"
+    const symbolMatch = diagnosticText.match(/^['"]?(\w+)['"]?$/);
+    if (symbolMatch) {
+      const symbol = symbolMatch[1];
+      // Verify this symbol is actually in the import
+      if (importInfo.symbols.includes(symbol)) {
+        return [symbol];
+      }
+    }
+
+    // Fallback: Try to extract symbol from diagnostic message
+    // Common patterns:
+    // - "'symbol' is declared but never used"
+    // - "symbol is not used"
+    const messageMatch = diagnostic.message.match(/['"](\w+)['"]/);
+    if (messageMatch) {
+      const symbol = messageMatch[1];
+      if (importInfo.symbols.includes(symbol)) {
+        return [symbol];
+      }
+    }
+
+    // If we can't determine a specific symbol, assume entire import is unused
+    return [];
   }
 
   /**

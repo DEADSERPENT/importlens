@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { UnusedImport } from './ImportAnalyzer';
+import type { LanguageAdapterRegistry } from '../adapters/LanguageAdapter';
 
 /**
  * Options for executing import removal
@@ -31,6 +32,8 @@ export interface ExecutionResult {
  * Safely executes removal of unused imports
  */
 export class SafeEditExecutor {
+  constructor(private adapterRegistry?: LanguageAdapterRegistry) {}
+
   /**
    * Remove unused imports from documents
    * @param unusedImports Array of unused imports to remove
@@ -96,10 +99,32 @@ export class SafeEditExecutor {
       const document = await vscode.workspace.openTextDocument(unusedImport.uri);
       const line = unusedImport.importInfo.range.start.line;
 
-      // Delete the entire line including newline
-      const lineRange = document.lineAt(line).rangeIncludingLineBreak;
+      // Check if we can do partial removal (only remove specific unused symbols)
+      let shouldDeleteEntireLine = true;
 
-      edit.delete(unusedImport.uri, lineRange);
+      if (this.adapterRegistry && unusedImport.unusedSymbols.length > 0) {
+        const adapter = this.adapterRegistry.getAdapter(document.languageId);
+
+        if (adapter?.removeUnusedSymbols) {
+          const newImportText = adapter.removeUnusedSymbols(
+            unusedImport.importInfo,
+            unusedImport.unusedSymbols
+          );
+
+          if (newImportText !== null) {
+            // We can do partial removal - replace the line with the new import
+            const lineRange = document.lineAt(line).range;
+            edit.replace(unusedImport.uri, lineRange, newImportText);
+            shouldDeleteEntireLine = false;
+          }
+        }
+      }
+
+      // If we couldn't do partial removal, delete the entire line
+      if (shouldDeleteEntireLine) {
+        const lineRange = document.lineAt(line).rangeIncludingLineBreak;
+        edit.delete(unusedImport.uri, lineRange);
+      }
     }
 
     // Show diff if requested

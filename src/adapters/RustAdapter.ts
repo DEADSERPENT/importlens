@@ -203,4 +203,47 @@ Source: ${diagnostic.source || 'rust-analyzer'}
 Side effects: ${hasSideEffects ? 'Possible (will be preserved in Safe Mode)' : 'No'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // If no specific unused symbols, or all symbols are unused, delete entire import
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null;
+    }
+
+    // Calculate symbols to keep
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // Handle different Rust import types
+    switch (importInfo.type) {
+      case 'named': {
+        // Rust grouped imports: use std::io::{Read, Write, BufRead};
+        // This is the case where we can do partial removal
+        const isPubUse = importInfo.fullText.trim().startsWith('pub use');
+        const prefix = isPubUse ? 'pub use' : 'use';
+
+        return `${prefix} ${importInfo.module}::{${symbolsToKeep.join(', ')}};`;
+      }
+
+      case 'default':
+        // Simple import: use std::io;
+        // If we're keeping any symbol, keep the import
+        return importInfo.fullText;
+
+      case 'namespace':
+        // Glob import: use std::io::*;
+        // Can't do partial removal on glob imports
+        return importInfo.fullText;
+
+      case 'side-effect':
+        // Side-effect imports don't have symbols
+        return importInfo.fullText;
+
+      default:
+        return null;
+    }
+  }
 }

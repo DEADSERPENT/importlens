@@ -200,4 +200,23 @@ Source: ${diagnostic.source || 'clangd'}
 Side effects: ${hasSideEffects ? 'Possible (will be preserved in Safe Mode)' : 'Unlikely'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // C/C++ includes are entire headers, not individual symbols
+    // If the header is unused, remove the entire include directive
+
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null; // Delete entire line
+    }
+
+    // Calculate symbols to keep
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // If any symbol from the header is still used, keep the include
+    return importInfo.fullText;
+  }
 }

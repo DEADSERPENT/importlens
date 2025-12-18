@@ -252,4 +252,83 @@ Source: ${diagnostic.source || 'Language Server'}
 Side effects: ${hasSideEffects ? 'Yes (will be preserved in Safe Mode)' : 'No'}
 Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
+
+  removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
+    // If no specific unused symbols, or if all symbols are unused, delete the entire import
+    if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
+      return null;
+    }
+
+    // Calculate which symbols to keep
+    const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+
+    if (symbolsToKeep.length === 0) {
+      return null;
+    }
+
+    // Handle different import types
+    switch (importInfo.type) {
+      case 'named': {
+        // Check if this is a type-only import
+        const isTypeOnlyImport = importInfo.fullText.match(/^import\s+type\s+{/);
+
+        // Handle mixed imports: import Default, { Named1, Named2 } from 'module'
+        const isMixedImport = importInfo.fullText.match(/^import\s+(\w+)\s*,\s*{/);
+
+        if (isMixedImport) {
+          const defaultImport = isMixedImport[1];
+          // Check if default import is being kept
+          if (symbolsToKeep.includes(defaultImport)) {
+            const namedSymbols = symbolsToKeep.filter(s => s !== defaultImport);
+            if (namedSymbols.length > 0) {
+              return `import ${defaultImport}, { ${namedSymbols.join(', ')} } from '${importInfo.module}';`;
+            } else {
+              return `import ${defaultImport} from '${importInfo.module}';`;
+            }
+          } else {
+            // Only named imports remain
+            return `import { ${symbolsToKeep.join(', ')} } from '${importInfo.module}';`;
+          }
+        }
+
+        // Handle type-only imports: import type { A, B } from 'module'
+        if (isTypeOnlyImport) {
+          return `import type { ${symbolsToKeep.join(', ')} } from '${importInfo.module}';`;
+        }
+
+        // Handle inline type modifiers: import { type A, B, type C } from 'module'
+        // For now, we'll preserve them if they exist in the original
+        const hasInlineTypeModifiers = importInfo.fullText.includes(' type ');
+        if (hasInlineTypeModifiers) {
+          // Try to preserve inline type modifiers by checking original text
+          // This is a simplified approach - a full parser would be more accurate
+          const symbolsWithModifiers = symbolsToKeep.map(symbol => {
+            // Check if this symbol had a 'type' modifier in the original
+            const typeModifierPattern = new RegExp(`\\btype\\s+${symbol}\\b`);
+            if (typeModifierPattern.test(importInfo.fullText)) {
+              return `type ${symbol}`;
+            }
+            return symbol;
+          });
+          return `import { ${symbolsWithModifiers.join(', ')} } from '${importInfo.module}';`;
+        }
+
+        // Regular named import: import { X, Y, Z } from 'module'
+        return `import { ${symbolsToKeep.join(', ')} } from '${importInfo.module}';`;
+      }
+
+      case 'default':
+      case 'namespace':
+        // For default/namespace imports, if any symbol is kept, keep the whole import
+        // These typically only have one symbol anyway
+        return symbolsToKeep.length > 0 ? importInfo.fullText : null;
+
+      case 'side-effect':
+        // Side-effect imports don't have symbols to remove
+        return importInfo.fullText;
+
+      default:
+        return null;
+    }
+  }
 }

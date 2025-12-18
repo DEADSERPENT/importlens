@@ -65,6 +65,15 @@ export interface LanguageAdapter {
    * @returns Explanation text
    */
   getExplanation(diagnostic: vscode.Diagnostic, importInfo: ImportInfo): string;
+
+  /**
+   * Remove specific unused symbols from an import statement
+   * This enables partial import cleanup (e.g., remove only unused symbols from a multi-symbol import)
+   * @param importInfo The original import information
+   * @param unusedSymbols Array of symbol names that are unused
+   * @returns New import text with unused symbols removed, or null to delete the entire line
+   */
+  removeUnusedSymbols?(importInfo: ImportInfo, unusedSymbols: string[]): string | null;
 }
 
 /**
