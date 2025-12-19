@@ -20,21 +20,33 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 # Check if importlens-cli is available
-if ! command -v npx &> /dev/null; then
-  echo -e "${RED}npx not found. Please install Node.js${NC}"
+if ! command -v node &> /dev/null; then
+  echo -e "${RED}Node.js not found. Please install Node.js${NC}"
   exit 1
+fi
+
+# Determine how to run ImportLens CLI
+if command -v importlens-cli &> /dev/null; then
+  # Use globally installed version
+  CLI_CMD="importlens-cli"
+elif [ -f "./out/src/cli.js" ]; then
+  # Use local build (for development)
+  CLI_CMD="node ./out/src/cli.js"
+else
+  # Try npx
+  CLI_CMD="npx importlens-cli"
 fi
 
 # Run ImportLens on staged files
 TEMP_OUTPUT=$(mktemp)
-echo "$STAGED_FILES" | xargs npx importlens-cli --check --format=text > "$TEMP_OUTPUT" 2>&1
+echo "$STAGED_FILES" | xargs $CLI_CMD --check --format=text > "$TEMP_OUTPUT" 2>&1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
   echo -e "${RED}❌ ImportLens found unused imports:${NC}\n"
   cat "$TEMP_OUTPUT"
   echo -e "\n${YELLOW}Options:${NC}"
-  echo "  1. Run 'npx importlens-cli --fix' to automatically remove unused imports"
+  echo "  1. Run '$CLI_CMD --fix' to automatically remove unused imports"
   echo "  2. Manually remove the unused imports"
   echo "  3. Use 'git commit --no-verify' to bypass this check (not recommended)"
   rm "$TEMP_OUTPUT"

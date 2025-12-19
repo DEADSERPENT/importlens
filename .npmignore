@@ -1,0 +1,39 @@
+# Source files (compiled versions are in out/)
+src/
+test/
+tsconfig.json
+
+# Development files
+.vscode/
+.vscode-test/
+.gitignore
+.yarnrc
+.eslintrc.json
+.prettierrc
+
+# Source maps (reduce package size)
+**/*.map
+
+# TypeScript source files (we include .d.ts if any)
+src/**/*.ts
+
+# VS Code specific (not needed for npm CLI)
+.vscodeignore
+icon.png
+*.vsix
+
+# GitHub workflows
+.github/
+
+# Documentation (exclude development docs, keep user docs)
+PUBLISHING.md
+DEPLOYMENT_OPTIONS.md
+README_DEPLOYMENT.md
+MARKETPLACE_DESCRIPTION.md
+
+# Node modules
+node_modules/
+
+# Test files
+*.test.js
+*.spec.js

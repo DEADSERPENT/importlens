@@ -1,3 +1,4 @@
+# Development files
 .vscode/**
 .vscode-test/**
 src/**
@@ -5,8 +6,20 @@ test/**
 .gitignore
 .yarnrc
 tsconfig.json
-*.md
 **/*.map
 **/*.ts
 node_modules/**
-!node_modules/@types/**
+
+# Documentation (keep README.md, exclude others)
+CI_CD_SETUP.md
+PUBLISHING.md
+DEPLOYMENT_OPTIONS.md
+README_DEPLOYMENT.md
+
+# Templates and workflows
+.github/**
+templates/**
+
+# Build artifacts to exclude
+.eslintrc.json
+.prettierrc

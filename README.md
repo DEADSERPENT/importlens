@@ -1,180 +1,128 @@
 # 🔍 ImportLens
 
-**Explainable, safe import cleanup for VS Code using LSP diagnostics.**
+**Clean unused imports safely across 7+ languages in VS Code and CI/CD.**
 
-ImportLens helps you **understand why an import is unused before removing it**, ensuring safe, confident cleanup. No AI guessing, no risky automation — just transparent, LSP-powered analysis.
+ImportLens detects and removes unused imports with LSP-powered analysis, visual explanations, and symbol-level precision. Works in both VS Code editor and command-line for automation.
 
 ---
 
 ## ✨ Features
 
-### 🎯 **Multi-Language Support**
-Dedicated adapters for **TypeScript, JavaScript, Python, Java, Go, Rust, C/C++** + generic LSP support for 50+ languages.
+**Multi-Language** • **Safe Mode** • **Explainable Results** • **Symbol-Level Precision** • **Visual Dashboard** • **Status Bar** • **CLI Tool** • **Diff Preview** • **Fast Performance**
 
-### 🛡️ **Safe Mode (Default)**
-Automatically preserves side-effect imports like CSS files, polyfills, test setup, and database drivers.
+Supports TypeScript/JS, Python, Java, Go, Rust, C/C++ + 50+ languages via generic LSP adapter.
 
-### 📊 **Visual Statistics Dashboard**
-Interactive dashboard with:
-- Real-time charts (by language, confidence level)
-- Import usage heatmap showing top files
-- Comprehensive metrics and insights
-- Exportable data and refresh capabilities
+## 🚀 Installation
 
-### 💡 **Explainable Results**
-Hover over any unused import to see:
-- **Why** it's unused (never referenced, shadowed, type-only, etc.)
-- **Source** (TypeScript LSP, Pylance, gopls, clangd, etc.)
-- **Side effects** detected
-- **Safety rating** (safe to remove vs. aggressive mode only)
+**VS Code:** Extensions → Search "ImportLens" → Install
+**CLI (Optional):** `npm install -g importlens`
 
-### 🔄 **Visual Diff Preview**
-See before/after changes in a **side-by-side diff view** before applying.
+## 📖 Usage
 
-### ⚡ **Performance Optimized**
-500ms debouncing, 5-second caching, and cancellable operations for large workspaces.
+### VS Code
 
----
+**Commands** (`Ctrl+Shift+P`):
+- `ImportLens: Clean Current File` - Remove unused imports from active file
+- `ImportLens: Clean Workspace` - Clean all files in workspace
+- `ImportLens: Show Import Statistics` - View dashboard with charts
+- `ImportLens: Toggle Safe Mode` - Switch safe/aggressive cleanup
 
-## 🚀 Quick Start
-
-### Install
-```bash
-ext install DEADSERPENT.importlens
-```
-
-### Usage
-
-**Command Palette** (`Ctrl+Shift+P`):
-- `ImportLens: Clean Current File`
-- `ImportLens: Clean Workspace`
-- `ImportLens: Show Import Statistics`
-- `ImportLens: Toggle Safe Mode`
-
-**Context Menu**:
-- Right-click in editor → Clean Current File
-- Right-click in Explorer → Clean Workspace
+**Status Bar**:
+- Click the import count in status bar to clean current file
+- Shows: `✓ Imports Clean` or `🗑 3 unused imports`
 
 **Auto-Clean on Save**:
-Enable: `importlens.enableOnSave`
+```json
+{
+  "importlens.enableOnSave": true
+}
+```
+
+### CLI Tool
+
+**Check for unused imports:**
+```bash
+importlens-cli --check src/
+```
+
+**Auto-fix with safe mode:**
+```bash
+importlens-cli --fix --safe-mode src/
+```
+
+**CI/CD with GitHub Actions:**
+```bash
+importlens-cli --check --format=github src/
+```
+
+**Output formats:** `text`, `json`, `github`, `junit`
 
 ---
 
 ## ⚙️ Configuration
 
-```json
-{
-  "importlens.enableOnSave": false,
-  "importlens.showExplanationTooltip": true,
-  "importlens.safeMode": true,
-  "importlens.aggressiveMode": false,
-  "importlens.showDiffBeforeApply": true,
-  "importlens.excludedLanguages": ["markdown", "plaintext"],
-  "importlens.excludePatterns": ["**/node_modules/**", "**/dist/**"]
-}
-```
+**VS Code Settings:**
+- `importlens.enableOnSave` - Auto-clean on save (default: false)
+- `importlens.safeMode` - Preserve side-effects (default: true)
+- `importlens.showStatusBar` - Show status bar count (default: true)
+- `importlens.excludePatterns` - File patterns to exclude
+
+**CLI Config:** Create `.importlensrc.json` with `safeMode`, `excludePatterns`, etc.
 
 ---
 
 ## 🌍 Language Support
 
-| Language | Adapter | Import Patterns | Side-Effect Detection |
-|----------|---------|-----------------|----------------------|
-| **TypeScript/JavaScript** | ✅ Full | ES6, CommonJS, Type-only | CSS, polyfills, env |
-| **Python** | ✅ Full | `import`, `from...import` | `__future__`, matplotlib |
-| **Java** | ✅ Full | Regular, static, star | JUnit, Mockito |
-| **Go** | ✅ Full | Single, grouped, blank | Database drivers |
-| **Rust** | ✅ Full | `use`, grouped, glob | Macros, prelude |
-| **C/C++** | ✅ Full | `#include <>`, `#include ""` | iostream, test frameworks |
-| **50+ Others** | ✅ Generic | Keyword detection | Conservative |
+TypeScript/JS • Python • Java • Go • Rust • C/C++ + 50+ via Generic LSP
 
 ---
 
-## 🎓 How It Works
+## 📋 Example
 
-1. **LSP Diagnostics** — Listens to language server's "unused import" diagnostics
-2. **Smart Analysis** — Language-specific adapters parse imports and detect side effects
-3. **Confidence Scoring** — Each import gets a confidence score (0-100%)
-4. **Safe Filtering** — Preserves imports with potential side effects
-5. **User Approval** — Shows diff preview before removal
-
----
-
-## 📋 Examples
-
-### TypeScript/JavaScript
-**Before:**
 ```typescript
-import React from 'react';           // Used
-import { useState, useEffect } from 'react';  // Unused
-import './styles.css';               // Side-effect
-```
+// Before
+import React from 'react';              // Used ✓
+import { useState, useEffect } from 'react';  // Unused ✗
+import './styles.css';                  // Side-effect ✓
 
-**After (Safe Mode):**
-```typescript
+// After (Safe Mode)
 import React from 'react';
-import './styles.css';
-```
-
-### Python
-**Before:**
-```python
-from __future__ import annotations   # Side-effect
-import os                             # Unused
-import matplotlib.pyplot as plt       # Side-effect
-```
-
-**After (Safe Mode):**
-```python
-from __future__ import annotations
-import matplotlib.pyplot as plt
-```
-
-### Go
-**Before:**
-```go
-import "fmt"                          // Used
-import _ "database/sql/driver"        // Blank import
-import "unused/package"               // Unused
-```
-
-**After (Safe Mode):**
-```go
-import "fmt"
-import _ "database/sql/driver"
+import './styles.css';                  // Preserved!
 ```
 
 ---
 
-## 🆚 Why ImportLens?
+## 🔧 CI/CD Integration
 
-| Feature | ImportLens | Others |
-|---------|-----------|--------|
-| **Multi-language** | ✅ 7 dedicated + 50 generic | ❌ TS/JS only |
-| **Explainable** | ✅ Shows why unused | ❌ Silent |
-| **Visual dashboard** | ✅ Charts + heatmap | ❌ No |
-| **Side-effect detection** | ✅ Language-aware | ⚠️ Basic |
-| **Diff preview** | ✅ Visual | ❌ No |
-| **Cancellable** | ✅ Yes | ❌ No |
+**GitHub Actions:**
+```yaml
+- name: Check unused imports
+  run: |
+    npm install -g importlens
+    importlens-cli --check --format=github src/
+```
+
+**Pre-commit Hook:**
+```bash
+npm run setup:hooks  # Installs pre-commit hook
+```
 
 ---
 
-## 🤝 Contributing
+## 📚 Documentation
 
-Contributions welcome! Fork, branch, commit, push, PR.
+- **[User Guide](USER_GUIDE.md)** - Detailed usage for VS Code and CLI
+- **[Architecture ](ARCHITECTURE.md)** - System design
+- **[CI/CD Setup](CI_CD_SETUP.md)** - GitHub Actions, GitLab, Jenkins
 
 ---
 
 ## 📄 License
 
-MIT License
+MIT © 2025 ImportLens Contributors
 
 ---
 
-## 🙏 Acknowledgments
-
-Built using VS Code Extension API, LSP, TypeScript, Pylance, gopls, and rust-analyzer.
-
----
-
-**Developed by DEADSERPENT**
+**Repository**: [github.com/DEADSERPENT/importlens](https://github.com/DEADSERPENT/importlens)
+**Issues**: [Report a bug](https://github.com/DEADSERPENT/importlens/issues)
+**Version**: 1.1.1

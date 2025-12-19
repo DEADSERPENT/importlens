@@ -51,6 +51,6 @@ Desktop.ini
 .cache/
 
 # Optional guides (keep if you want to commit them)
-# LOGO_GUIDE.md
-# IMPLEMENTATION_SUMMARY.md
-# icon_template.svg
+importLens-1.1.0.tgz
+icon.png
+VISON.md

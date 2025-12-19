@@ -1,5 +1,9 @@
-# ImportLens CI/CD Workflow
-# This workflow checks for unused imports in your codebase
+# ImportLens CI/CD Workflow (for published npm package)
+# Use this workflow after ImportLens is published to npm
+#
+# To use this workflow:
+# 1. Copy this file to .github/workflows/importlens.yml
+# 2. Customize the branches and paths as needed
 
 name: ImportLens Check
 
@@ -22,21 +26,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and build
-        run: |
-          npm install
-          npm run compile
+      - name: Install ImportLens
+        run: npm install -g importlens
 
       - name: Check for unused imports
         run: |
-          node ./out/src/cli.js --check --format=github src/
+          importlens-cli --check --format=github src/
         continue-on-error: false
 
       # Optional: Generate JSON report as artifact
       - name: Generate JSON Report
         if: always()
         run: |
-          node ./out/src/cli.js --check --format=json src/ > importlens-report.json
+          importlens-cli --check --format=json src/ > importlens-report.json
         continue-on-error: true
 
       - name: Upload Report
