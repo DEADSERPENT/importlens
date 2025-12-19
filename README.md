@@ -1,5 +1,9 @@
 ![ImportLens Logo](header.png)
 
+[![NPM](https://img.shields.io/npm/v/importlens?color=CB3837&logo=npm)](https://www.npmjs.com/package/importlens)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SAMARTHASMG14.importlens?logo=visualstudiocode&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)
+
+
 **Clean unused imports across 7+ languages in VS Code and CI/CD with AST-powered precision.**
 
 ImportLens detects and removes unused imports using AST analysis for TypeScript/JavaScript and LSP for other languages. Features symbol-level precision, import organization, Quick Fixes, and baseline tracking for CI/CD.
