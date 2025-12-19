@@ -1,20 +1,27 @@
+# ===================================
+# ImportLens - Professional .gitignore
+# ===================================
+
 # Dependencies
 node_modules/
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
-# Build outputs
+# Build Outputs
 out/
 dist/
 *.vsix
+*.tgz
 
-# VS Code test downloads
+# VS Code Testing
 .vscode-test/
 .vscode-test-web/
 
-# Test coverage
+# Test Coverage
 coverage/
 .nyc_output/
+*.lcov
 
 # TypeScript
 *.tsbuildinfo
@@ -25,34 +32,58 @@ coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
-# OS files
+# OS Files
 .DS_Store
 Thumbs.db
 Desktop.ini
-
-# IDE
-.idea/
-.vscode/settings.json
-.vscode/launch.json
-.vscode/tasks.json
 *.swp
 *.swo
 *~
 
-# Environment
+# IDE Settings (keep shared configs, ignore personal)
+.idea/
+.vscode/settings.json
+.vscode-server/
+
+# Environment Variables
 .env
 .env.local
 .env.*.local
 
-# Temporary files
+# Temporary Files
 *.tmp
 *.temp
 .cache/
+temp/
 
-# Optional guides (keep if you want to commit them)
-importLens-1.1.0.tgz
-icon.png
-VISON.md
+# Baseline Files (optional - users may want to commit these)
+# .importlens-baseline.json
+
+# Test Artifacts
+test-results.json
+junit-report.xml
+
+# Release Notes (generated)
+# docs/releases/*.md
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+
+# markdown files
 TEST_REPORT.md
-2.0report.md
+VISION.md
+
+# LOGO files
+logo.png

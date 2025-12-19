@@ -309,24 +309,56 @@ export class StatisticsPanel {
     </head>
     <body>
       <div class="header">
-        <h1>📊 ImportLens Statistics</h1>
-        <button class="refresh-btn" onclick="refresh()">🔄 Refresh</button>
+        <h1>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 8px;">
+            <rect x="3" y="3" width="7" height="7" rx="1" fill="#4FC3F7" opacity="0.9"/>
+            <rect x="3" y="13" width="7" height="7" rx="1" fill="#66BB6A" opacity="0.9"/>
+            <rect x="13" y="3" width="7" height="7" rx="1" fill="#FFA726" opacity="0.9"/>
+            <rect x="13" y="13" width="7" height="7" rx="1" fill="#EF5350" opacity="0.9"/>
+            <path d="M6 6l2 2M6 16l2 2M16 6l2 2M16 16l2 2" stroke="white" stroke-width="1.5" opacity="0.6"/>
+          </svg>
+          ImportLens Statistics
+        </h1>
+        <button class="refresh-btn" onclick="refresh()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M4 12a8 8 0 0 1 15.3-3.1M20 12a8 8 0 0 1-15.3 3.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19 8v4h-4M5 16v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Refresh
+        </button>
       </div>
 
       <div class="stats-grid">
         <div class="stat-card">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin-bottom: 8px;">
+            <circle cx="12" cy="12" r="10" stroke="#4FC3F7" stroke-width="2" fill="none"/>
+            <path d="M12 6v6l4 2" stroke="#4FC3F7" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="2" fill="#4FC3F7"/>
+          </svg>
           <div class="stat-label">Total Unused Imports</div>
           <div class="stat-value">${stats.total}</div>
         </div>
         <div class="stat-card">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin-bottom: 8px;">
+            <circle cx="12" cy="12" r="10" stroke="#66BB6A" stroke-width="2" fill="none"/>
+            <path d="M8 12l2 2 4-4" stroke="#66BB6A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
           <div class="stat-label">Safe to Remove</div>
           <div class="stat-value">${stats.safeToRemove}</div>
         </div>
         <div class="stat-card">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin-bottom: 8px;">
+            <path d="M12 2L2 7v10c0 5 10 9 10 9s10-4 10-9V7l-10-5z" stroke="#FFA726" stroke-width="2" fill="none"/>
+            <path d="M12 8v4M12 16h.01" stroke="#FFA726" stroke-width="2" stroke-linecap="round"/>
+          </svg>
           <div class="stat-label">With Side Effects</div>
           <div class="stat-value">${stats.withSideEffects}</div>
         </div>
         <div class="stat-card">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="margin-bottom: 8px;">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="#AB47BC" stroke-width="2" fill="none"/>
+            <path d="M7 7h10M7 12h10M7 17h7" stroke="#AB47BC" stroke-width="2" stroke-linecap="round"/>
+          </svg>
           <div class="stat-label">Files Analyzed</div>
           <div class="stat-value">${stats.filesAnalyzed}</div>
         </div>
@@ -334,17 +366,43 @@ export class StatisticsPanel {
 
       <div class="charts-container">
         <div class="chart-card">
-          <div class="chart-title">Unused Imports by Language</div>
+          <div class="chart-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 6px;">
+              <rect x="3" y="14" width="4" height="7" rx="1" fill="#4FC3F7" opacity="0.8"/>
+              <rect x="10" y="8" width="4" height="13" rx="1" fill="#66BB6A" opacity="0.8"/>
+              <rect x="17" y="3" width="4" height="18" rx="1" fill="#FFA726" opacity="0.8"/>
+            </svg>
+            Unused Imports by Language
+          </div>
           <canvas id="languageChart"></canvas>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Confidence Distribution</div>
+          <div class="chart-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 6px;">
+              <circle cx="12" cy="12" r="10" stroke="#AB47BC" stroke-width="2" fill="none"/>
+              <path d="M12 12L20 12A8 8 0 0 0 12 4Z" fill="#66BB6A" opacity="0.7"/>
+              <path d="M12 12L20 12A8 8 0 0 1 12 20Z" fill="#FFA726" opacity="0.7"/>
+            </svg>
+            Confidence Distribution
+          </div>
           <canvas id="confidenceChart"></canvas>
         </div>
       </div>
 
       <div class="heatmap">
-        <div class="heatmap-title">🔥 Top Files with Most Unused Imports</div>
+        <div class="heatmap-title">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M12 2C12 2 4 6 4 12C4 16 8 20 12 22C16 20 20 16 20 12C20 6 12 2 12 2Z" fill="url(#fireGradient)" stroke="#FF6B6B" stroke-width="1.5"/>
+            <defs>
+              <linearGradient id="fireGradient" x1="12" y1="2" x2="12" y2="22">
+                <stop offset="0%" stop-color="#FFD700" opacity="0.9"/>
+                <stop offset="50%" stop-color="#FF6B6B" opacity="0.8"/>
+                <stop offset="100%" stop-color="#EF5350" opacity="0.7"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          Top Files with Most Unused Imports
+        </div>
         <div class="heatmap-grid">
           ${stats.topFiles.map((file, index) => {
             const percentage = (file.count / stats.total) * 100;
@@ -358,7 +416,20 @@ export class StatisticsPanel {
             </div>
             `;
           }).join('')}
-          ${stats.topFiles.length === 0 ? '<div style="text-align: center; padding: 20px; color: var(--vscode-descriptionForeground);">No unused imports found! 🎉</div>' : ''}
+          ${stats.topFiles.length === 0 ? `
+            <div style="text-align: center; padding: 40px 20px; color: var(--vscode-descriptionForeground);">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" style="margin-bottom: 16px;">
+                <circle cx="12" cy="12" r="10" stroke="#66BB6A" stroke-width="2" fill="none"/>
+                <path d="M8 12l2 2 4-4" stroke="#66BB6A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="1" fill="#66BB6A"/>
+                <circle cx="17" cy="7" r="1" fill="#FFD700"/>
+                <circle cx="7" cy="7" r="1" fill="#FFD700"/>
+                <circle cx="7" cy="17" r="1" fill="#FFD700"/>
+              </svg>
+              <div style="font-size: 18px; font-weight: 600; color: #66BB6A; margin-bottom: 8px;">All Clean!</div>
+              <div style="font-size: 14px;">No unused imports found in your workspace</div>
+            </div>
+          ` : ''}
         </div>
       </div>
 

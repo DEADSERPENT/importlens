@@ -32,5 +32,4 @@ templates/**
 TEST_REPORT.md
 VERSION_2.0.0_TEST_REPORT.md
 VISON.md
-.claude/**
 importlens-*.vsix

@@ -395,6 +395,56 @@ importlens-cli --check src/**/*.{ts,py,java,go,rs}
 
 ---
 
+## 🔍 Technical Architecture: Dual-Engine Analysis
+
+ImportLens v2.0.0 utilizes a sophisticated dual-engine approach to ensure maximum accuracy across different environments:
+
+### VS Code Extension (LSP-Based)
+The extension leverages the full power of the **Language Server Protocol (LSP)**:
+- **Real-time diagnostics** from language servers (`tsserver`, `Pylance`, `rust-analyzer`, etc.)
+- **Project-wide context** including type checking and cross-file references
+- **100% accuracy** for all supported languages through native LSP integration
+- **Minimal overhead** as the language server is already running in VS Code
+
+**Result:** The most accurate detection possible, using the same intelligence that powers VS Code's own error checking.
+
+### CLI Tool (AST-Based for TypeScript/JavaScript)
+The CLI uses a standalone **Babel AST Parser** for TypeScript and JavaScript:
+- **Headless operation** suitable for CI/CD pipelines without a full IDE
+- **Symbol-level precision** detecting which specific imports are unused
+- **Zero dependencies** on external language servers
+- **Fast analysis** optimized for batch processing
+
+For other languages (Python, Java, Go, Rust, C++), the CLI uses pattern-based detection with safe-mode fallbacks.
+
+**Result:** Accurate standalone analysis without requiring a full development environment.
+
+### When to Use Each
+
+| Scenario | Recommended Tool | Reason |
+|----------|------------------|--------|
+| **Development workflow** | VS Code Extension | Maximum accuracy via LSP |
+| **CI/CD pipelines** | CLI Tool | Headless, fast, no IDE needed |
+| **Pre-commit hooks** | CLI Tool | Quick checks before commits |
+| **Large refactoring** | VS Code Extension | Interactive fixes with full context |
+| **TypeScript/JavaScript only** | Either | Both provide 100% accuracy |
+| **Multi-language projects** | VS Code Extension | LSP support for all languages |
+
+### Baseline Tracking (v2.0.0)
+
+The CLI's new **baseline system** allows incremental adoption:
+```bash
+# Generate baseline to capture existing technical debt
+importlens-cli --baseline-generate src/
+
+# CI/CD checks only fail on NEW unused imports
+importlens-cli --check src/
+```
+
+This enables teams to adopt ImportLens without blocking deployments while preventing new technical debt.
+
+---
+
 ## Troubleshooting
 
 ### VS Code Extension Not Working

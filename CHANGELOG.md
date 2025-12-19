@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎯 Major Features
 
-#### AST-Based TypeScript/JavaScript Analysis
-- **100% Accurate Detection**: Replaced regex-based analysis with Babel AST parser for TypeScript and JavaScript
-- **Zero False Positives**: Eliminates detection errors like the `annotations` issue in Python or blank imports in Go
+#### AST-Based TypeScript/JavaScript Analysis (CLI)
+- **100% Accurate CLI Detection**: Replaced regex-based analysis with Babel AST parser for TypeScript and JavaScript in the CLI tool
+- **Symbol-Level Precision**: Detects which specific imports are unused within multi-symbol import statements
 - **Multi-line Import Support**: Correctly handles imports spanning multiple lines
 - **JSX Support**: Properly identifies component usage in React files
+- **Headless Operation**: Enables accurate standalone analysis in CI/CD without requiring a language server
+- **Note**: The VS Code extension continues to use LSP-based detection (tsserver, Pylance, etc.) for maximum accuracy
 
 #### Import Organization
 - **Smart Sorting**: Automatically organize imports into groups (side-effects, external, internal, relative)
