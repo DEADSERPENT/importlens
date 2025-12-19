@@ -1,0 +1,106 @@
+name: ImportLens - Baseline Check
+
+# This workflow uses baseline mode to prevent NEW unused imports
+# while allowing existing technical debt
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+  push:
+    branches: [ main, master, develop ]
+
+jobs:
+  baseline-check:
+    name: Check for New Unused Imports (Baseline Mode)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ImportLens CLI
+        run: npm install -g importlens
+
+      - name: Check if baseline exists
+        id: baseline-exists
+        run: |
+          if [ -f .importlens-baseline.json ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # If no baseline exists, create one on the first run
+      - name: Generate baseline (first run only)
+        if: steps.baseline-exists.outputs.exists == 'false'
+        run: |
+          echo "⚠️  No baseline found. Generating initial baseline..."
+          importlens-cli --baseline-generate src/
+
+          echo "📝 Baseline created. Please commit .importlens-baseline.json to your repository."
+          echo "   This baseline captures current technical debt."
+          echo "   Future PRs will be checked against this baseline."
+
+      # Check for new issues beyond baseline
+      - name: Check for new unused imports
+        if: steps.baseline-exists.outputs.exists == 'true'
+        run: |
+          echo "🔍 Checking for new unused imports beyond baseline..."
+          importlens-cli --check --baseline-check src/
+
+      # Generate report for artifacts
+      - name: Generate detailed report
+        if: always()
+        run: importlens-cli --check --format=json src/ > importlens-report.json || true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: importlens-baseline-report
+          path: |
+            importlens-report.json
+            .importlens-baseline.json
+
+      # Comment on PR with baseline comparison
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ImportLens Baseline Check Failed
+
+            ❌ Your changes introduce new unused imports beyond the accepted baseline.
+
+            ### What this means:
+            - The baseline captures existing technical debt in the codebase
+            - Your PR has introduced **new** unused imports
+            - Please remove these new unused imports before merging
+
+            ### How to fix:
+            1. Run locally: \`npx importlens-cli --check src/\`
+            2. Review and remove the newly introduced unused imports
+            3. Push your changes
+
+            ### Updating the baseline (if intentional):
+            If you're intentionally adding imports for future use:
+            \`\`\`bash
+            npx importlens-cli --baseline-update src/
+            git add .importlens-baseline.json
+            git commit -m "chore: update importlens baseline"
+            \`\`\`
+
+            ⚠️ Only update the baseline after team review and approval.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

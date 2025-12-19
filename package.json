@@ -1,8 +1,8 @@
 {
   "name": "importlens",
   "displayName": "ImportLens",
-  "description": "Explainable, safe import cleanup for VS Code using LSP diagnostics",
-  "version": "1.1.1",
+  "description": "Intelligent import management with AST-based analysis, organization, and CI/CD integration",
+  "version": "2.0.0",
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
@@ -65,6 +65,10 @@
       {
         "command": "importlens.toggleSafeMode",
         "title": "ImportLens: Toggle Safe Mode"
+      },
+      {
+        "command": "importlens.organizeImports",
+        "title": "ImportLens: Organize Imports"
       }
     ],
     "menus": {
@@ -150,6 +154,11 @@
     "publish:npm": "npm publish",
     "setup:hooks": "node -e \"require('fs').copyFileSync('./templates/pre-commit-hook.sh', '.git/hooks/pre-commit'); require('fs').chmodSync('.git/hooks/pre-commit', '755'); console.log('Pre-commit hook installed!')\"",
     "setup:precommit": "cp ./templates/.pre-commit-config.yaml ./.pre-commit-config.yaml && echo 'Pre-commit config installed! Run: pre-commit install'"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "@babel/traverse": "^7.23.0",
+    "@babel/types": "^7.23.0"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

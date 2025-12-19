@@ -18,6 +18,7 @@ import { parseArgs } from './cli/ArgumentParser';
 import { FileDiscovery } from './cli/FileDiscovery';
 import { CLIAnalyzer } from './cli/CLIAnalyzer';
 import { OutputFormatter } from './cli/OutputFormatter';
+import { BaselineManager } from './cli/BaselineManager';
 
 async function main() {
   try {
@@ -51,7 +52,46 @@ async function main() {
     // Process files
     const results = await analyzer.analyzeFiles(files);
 
-    // Format and output results
+    // Initialize baseline manager
+    const baselineManager = new BaselineManager(args.baseline);
+
+    // Handle baseline operations
+    if (args.baselineGenerate) {
+      const baseline = baselineManager.generateBaseline(results);
+      baselineManager.saveBaseline(baseline);
+      process.exit(0);
+    }
+
+    if (args.baselineUpdate) {
+      baselineManager.updateBaseline(results);
+      process.exit(0);
+    }
+
+    if (args.baselineCheck || baselineManager.baselineExists()) {
+      const baseline = baselineManager.loadBaseline();
+
+      if (!baseline) {
+        console.log('⚠️  No baseline found. Run with --baseline-generate to create one.');
+        console.log('   Continuing with standard analysis...\n');
+      } else {
+        // Compare against baseline
+        const comparison = baselineManager.compareWithBaseline(results, baseline);
+        baselineManager.printComparisonSummary(comparison);
+
+        // Exit with error code if new issues found
+        if (args.check && comparison.summary.totalNew > 0) {
+          console.log('\n❌ New unused imports detected beyond baseline!');
+          process.exit(1);
+        }
+
+        if (comparison.summary.totalNew === 0) {
+          console.log('\n✓ All checks passed!');
+          process.exit(0);
+        }
+      }
+    }
+
+    // Format and output results (if not using baseline mode)
     const formatter = new OutputFormatter(args.format);
     const output = formatter.format(results);
 
@@ -89,6 +129,12 @@ OPTIONS:
   --help               Show this help message
   --version            Show version information
 
+BASELINE OPTIONS (for CI/CD):
+  --baseline=<file>         Path to baseline file (default: .importlens-baseline.json)
+  --baseline-generate       Generate a new baseline from current results
+  --baseline-update         Update existing baseline with current results
+  --baseline-check          Check for new issues beyond baseline (auto-enabled if baseline exists)
+
 EXAMPLES:
   # Check TypeScript files
   importlens-cli --check src/**/*.ts
@@ -101,6 +147,16 @@ EXAMPLES:
 
   # JSON output for custom processing
   importlens-cli --check --format=json src/ > report.json
+
+  # Baseline workflow for CI/CD:
+  # 1. Generate baseline to capture current technical debt
+  importlens-cli --baseline-generate src/
+
+  # 2. In CI, check for NEW issues beyond baseline
+  importlens-cli --check src/  # Auto-detects baseline
+
+  # 3. Update baseline when intentionally accepting new debt
+  importlens-cli --baseline-update src/
 
 CONFIGURATION:
   Create .importlensrc.json in your project root:

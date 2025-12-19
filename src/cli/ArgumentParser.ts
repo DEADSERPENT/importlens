@@ -13,6 +13,10 @@ export interface CLIArguments {
   help: boolean;
   version: boolean;
   exitOnError: boolean;
+  baseline?: string;
+  baselineGenerate: boolean;
+  baselineUpdate: boolean;
+  baselineCheck: boolean;
 }
 
 export interface ConfigFile {
@@ -36,7 +40,10 @@ export function parseArgs(argv: string[]): CLIArguments {
     files: [],
     help: false,
     version: false,
-    exitOnError: true
+    exitOnError: true,
+    baselineGenerate: false,
+    baselineUpdate: false,
+    baselineCheck: false
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -69,6 +76,14 @@ export function parseArgs(argv: string[]): CLIArguments {
       args.version = true;
     } else if (arg === '--no-exit-on-error') {
       args.exitOnError = false;
+    } else if (arg.startsWith('--baseline=')) {
+      args.baseline = arg.split('=')[1];
+    } else if (arg === '--baseline-generate' || arg === '--generate-baseline') {
+      args.baselineGenerate = true;
+    } else if (arg === '--baseline-update' || arg === '--update-baseline') {
+      args.baselineUpdate = true;
+    } else if (arg === '--baseline-check' || arg === '--check-baseline') {
+      args.baselineCheck = true;
     } else if (!arg.startsWith('--')) {
       args.files.push(arg);
     } else {

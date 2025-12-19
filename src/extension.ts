@@ -11,6 +11,7 @@ import { ImportAnalyzer } from './core/ImportAnalyzer';
 import { SafeEditExecutor } from './core/SafeEditExecutor';
 import { DiagnosticListener } from './core/DiagnosticListener';
 import { StatisticsPanel } from './ui/StatisticsPanel';
+import { QuickFixProvider } from './ui/QuickFixProvider';
 
 let diagnosticListener: DiagnosticListener | null = null;
 let analyzer: ImportAnalyzer | null = null;
@@ -37,6 +38,25 @@ export function activate(context: vscode.ExtensionContext) {
   analyzer = new ImportAnalyzer(adapterRegistry);
   executor = new SafeEditExecutor(adapterRegistry);
   diagnosticListener = new DiagnosticListener(analyzer, updateStatusBar);
+
+  // Register Quick Fix provider for all languages
+  const quickFixProvider = new QuickFixProvider(analyzer, adapterRegistry);
+  const supportedLanguages = [
+    'typescript', 'typescriptreact', 'javascript', 'javascriptreact',
+    'python', 'java', 'go', 'rust', 'cpp', 'c'
+  ];
+
+  for (const language of supportedLanguages) {
+    context.subscriptions.push(
+      vscode.languages.registerCodeActionsProvider(
+        language,
+        quickFixProvider,
+        {
+          providedCodeActionKinds: QuickFixProvider.providedCodeActionKinds
+        }
+      )
+    );
+  }
 
   // Initialize status bar
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -256,12 +276,82 @@ function registerCommands(context: vscode.ExtensionContext) {
     }
   );
 
+  // Command: Organize Imports
+  const organizeImportsCommand = vscode.commands.registerCommand(
+    'importlens.organizeImports',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('No active editor');
+        return;
+      }
+
+      // Only support TypeScript/JavaScript for now
+      const languageId = editor.document.languageId;
+      if (!['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].includes(languageId)) {
+        vscode.window.showWarningMessage('Import organization is only supported for TypeScript and JavaScript files');
+        return;
+      }
+
+      try {
+        // Import the ASTAnalyzer dynamically
+        const { ASTAnalyzer } = await import('./cli/ASTAnalyzer');
+        const astAnalyzer = new ASTAnalyzer();
+
+        const content = editor.document.getText();
+        const result = astAnalyzer.analyzeTypeScriptFile(content, editor.document.uri.fsPath);
+
+        // Organize imports
+        const organized = astAnalyzer.organizeImports(result.imports);
+        const newImports = astAnalyzer.generateImportStatements(organized);
+
+        // Find the import region in the document
+        const lines = content.split('\n');
+        let firstImportLine = -1;
+        let lastImportLine = -1;
+
+        for (let i = 0; i < lines.length; i++) {
+          const trimmed = lines[i].trim();
+          if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) {
+            if (firstImportLine === -1) {
+              firstImportLine = i;
+            }
+            lastImportLine = i;
+          } else if (firstImportLine !== -1 && trimmed !== '' && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
+            // Stop at first non-import, non-empty, non-comment line
+            break;
+          }
+        }
+
+        if (firstImportLine === -1) {
+          vscode.window.showInformationMessage('No imports found to organize');
+          return;
+        }
+
+        // Replace the import region
+        await editor.edit(editBuilder => {
+          const range = new vscode.Range(
+            new vscode.Position(firstImportLine, 0),
+            new vscode.Position(lastImportLine + 1, 0)
+          );
+          editBuilder.replace(range, newImports + '\n\n');
+        });
+
+        vscode.window.showInformationMessage('Imports organized successfully!');
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to organize imports: ${error}`);
+        console.error('Error organizing imports:', error);
+      }
+    }
+  );
+
   // Register all commands
   context.subscriptions.push(
     cleanCurrentFileCommand,
     cleanWorkspaceCommand,
     showStatisticsCommand,
-    toggleSafeModeCommand
+    toggleSafeModeCommand,
+    organizeImportsCommand
   );
 }
 
