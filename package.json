@@ -6,7 +6,6 @@
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
-
   "repository": {
     "type": "git",
     "url": "https://github.com/DEADSERPENT/importlens"
@@ -15,7 +14,6 @@
   "bugs": {
     "url": "https://github.com/DEADSERPENT/importlens/issues"
   },
-
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -156,9 +154,9 @@
     "setup:precommit": "cp ./templates/.pre-commit-config.yaml ./.pre-commit-config.yaml && echo 'Pre-commit config installed! Run: pre-commit install'"
   },
   "dependencies": {
-    "@babel/parser": "^7.23.0",
-    "@babel/traverse": "^7.23.0",
-    "@babel/types": "^7.23.0"
+    "@babel/parser": "^7.28.5",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

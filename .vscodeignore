@@ -23,3 +23,14 @@ templates/**
 # Build artifacts to exclude
 .eslintrc.json
 .prettierrc
+
+# Old artifacts and internal files
+*.tgz
+*report.md
+*REPORT.md
+2.0report.md
+TEST_REPORT.md
+VERSION_2.0.0_TEST_REPORT.md
+VISON.md
+.claude/**
+importlens-*.vsix

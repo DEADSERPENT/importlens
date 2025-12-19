@@ -6,7 +6,11 @@
       "Bash(npx:*)",
       "Bash(npm pack:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run package:vscode:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm --version:*)"
     ]
   }
 }
