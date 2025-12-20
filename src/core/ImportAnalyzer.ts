@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { LanguageAdapterRegistry } from '../adapters/LanguageAdapter';
 import type { ImportInfo } from '../adapters/LanguageAdapter';
+import type { ConfidenceConfig } from '../cli/ArgumentParser';
 
 /**
  * Result of analyzing a single diagnostic for unused imports
@@ -26,7 +27,18 @@ export interface UnusedImport {
  * Analyzes diagnostics to identify unused imports
  */
 export class ImportAnalyzer {
-  constructor(private adapterRegistry: LanguageAdapterRegistry) {}
+  private readonly defaultConfig: ConfidenceConfig = {
+    baseConfidence: 0.9,
+    sideEffectMultiplier: 0.7,
+    knownSourceMultiplier: 1.1,
+    unknownModuleMultiplier: 0.6,
+    specificCodeMultiplier: 1.2
+  };
+
+  constructor(
+    private adapterRegistry: LanguageAdapterRegistry,
+    private confidenceConfig?: Partial<ConfidenceConfig>
+  ) {}
 
   /**
    * Find all unused imports in a document
@@ -171,6 +183,7 @@ export class ImportAnalyzer {
 
   /**
    * Calculate confidence that an import is truly unused
+   * Uses configurable multipliers for different scenarios
    * @param diagnostic The diagnostic
    * @param importInfo The import information
    * @param hasSideEffects Whether it has side effects
@@ -181,32 +194,33 @@ export class ImportAnalyzer {
     importInfo: ImportInfo,
     hasSideEffects: boolean
   ): number {
-    let confidence = 0.9; // Base confidence
+    // Merge default config with user-provided config
+    const cfg = { ...this.defaultConfig, ...this.confidenceConfig };
+
+    let confidence = cfg.baseConfidence;
 
     // Lower confidence for side-effect imports
     if (hasSideEffects) {
-      confidence *= 0.7;
+      confidence *= cfg.sideEffectMultiplier;
     }
 
     // Higher confidence for specific diagnostic sources
     const source = diagnostic.source?.toLowerCase() || '';
-    if (source.includes('typescript') || source.includes('tsserver')) {
-      confidence = Math.min(confidence * 1.1, 0.99);
-    } else if (source.includes('pylance') || source.includes('pyright')) {
-      confidence = Math.min(confidence * 1.1, 0.99);
-    } else if (source.includes('jdtls') || source.includes('java')) {
-      confidence = Math.min(confidence * 1.1, 0.99);
+    const knownSources = ['typescript', 'tsserver', 'pylance', 'pyright', 'jdtls', 'java'];
+
+    if (knownSources.some(s => source.includes(s))) {
+      confidence = Math.min(confidence * cfg.knownSourceMultiplier, 0.99);
     }
 
     // Lower confidence for generic patterns
     if (importInfo.module === 'unknown') {
-      confidence *= 0.6;
+      confidence *= cfg.unknownModuleMultiplier;
     }
 
     // Higher confidence for specific error codes
     // TypeScript: 6133 is "declared but never used"
     if (diagnostic.code === 6133 || diagnostic.code === '6133') {
-      confidence = Math.min(confidence * 1.2, 0.99);
+      confidence = Math.min(confidence * cfg.specificCodeMultiplier, 0.99);
     }
 
     return Math.max(0, Math.min(1, confidence));

@@ -134,6 +134,41 @@
             "**/*.min.js"
           ],
           "description": "File patterns to exclude from import cleaning"
+        },
+        "importlens.confidence.baseConfidence": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Base confidence score for unused import detection (0-1)"
+        },
+        "importlens.confidence.sideEffectMultiplier": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Multiplier applied when import has potential side effects"
+        },
+        "importlens.confidence.knownSourceMultiplier": {
+          "type": "number",
+          "default": 1.1,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Multiplier for diagnostics from known sources (TypeScript, Pylance, etc.)"
+        },
+        "importlens.confidence.unknownModuleMultiplier": {
+          "type": "number",
+          "default": 0.6,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Multiplier for imports from unknown/unresolved modules"
+        },
+        "importlens.confidence.specificCodeMultiplier": {
+          "type": "number",
+          "default": 1.2,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Multiplier for specific diagnostic codes (e.g., TS 6133)"
         }
       }
     }
@@ -156,7 +191,8 @@
   "dependencies": {
     "@babel/parser": "^7.28.5",
     "@babel/traverse": "^7.28.5",
-    "@babel/types": "^7.28.5"
+    "@babel/types": "^7.28.5",
+    "fast-glob": "^3.3.2"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

@@ -12,11 +12,48 @@ import { SafeEditExecutor } from './core/SafeEditExecutor';
 import { DiagnosticListener } from './core/DiagnosticListener';
 import { StatisticsPanel } from './ui/StatisticsPanel';
 import { QuickFixProvider } from './ui/QuickFixProvider';
+import type { ConfidenceConfig } from './cli/ArgumentParser';
 
 let diagnosticListener: DiagnosticListener | null = null;
 let analyzer: ImportAnalyzer | null = null;
 let executor: SafeEditExecutor | null = null;
 let statusBarItem: vscode.StatusBarItem;
+
+/**
+ * Read confidence configuration from VS Code settings
+ */
+function getConfidenceConfig(): Partial<ConfidenceConfig> {
+  const config = vscode.workspace.getConfiguration('importlens.confidence');
+
+  const confidenceConfig: Partial<ConfidenceConfig> = {};
+
+  const baseConfidence = config.get<number>('baseConfidence');
+  if (baseConfidence !== undefined) {
+    confidenceConfig.baseConfidence = baseConfidence;
+  }
+
+  const sideEffectMultiplier = config.get<number>('sideEffectMultiplier');
+  if (sideEffectMultiplier !== undefined) {
+    confidenceConfig.sideEffectMultiplier = sideEffectMultiplier;
+  }
+
+  const knownSourceMultiplier = config.get<number>('knownSourceMultiplier');
+  if (knownSourceMultiplier !== undefined) {
+    confidenceConfig.knownSourceMultiplier = knownSourceMultiplier;
+  }
+
+  const unknownModuleMultiplier = config.get<number>('unknownModuleMultiplier');
+  if (unknownModuleMultiplier !== undefined) {
+    confidenceConfig.unknownModuleMultiplier = unknownModuleMultiplier;
+  }
+
+  const specificCodeMultiplier = config.get<number>('specificCodeMultiplier');
+  if (specificCodeMultiplier !== undefined) {
+    confidenceConfig.specificCodeMultiplier = specificCodeMultiplier;
+  }
+
+  return confidenceConfig;
+}
 
 /**
  * Extension activation
@@ -34,8 +71,9 @@ export function activate(context: vscode.ExtensionContext) {
   adapterRegistry.register(new CppAdapter());
   adapterRegistry.register(new GenericLSPAdapter(), true); // Generic fallback
 
-  // Initialize core components
-  analyzer = new ImportAnalyzer(adapterRegistry);
+  // Initialize core components with confidence configuration
+  const confidenceConfig = getConfidenceConfig();
+  analyzer = new ImportAnalyzer(adapterRegistry, confidenceConfig);
   executor = new SafeEditExecutor(adapterRegistry);
   diagnosticListener = new DiagnosticListener(analyzer, updateStatusBar);
 

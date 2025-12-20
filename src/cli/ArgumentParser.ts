@@ -1,6 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+/**
+ * Configuration for the confidence scoring engine
+ */
+export interface ConfidenceConfig {
+  baseConfidence: number;          // Default: 0.9
+  sideEffectMultiplier: number;    // Default: 0.7
+  knownSourceMultiplier: number;   // Default: 1.1
+  unknownModuleMultiplier: number; // Default: 0.6
+  specificCodeMultiplier: number;  // Default: 1.2
+}
+
 export interface CLIArguments {
   check: boolean;
   fix: boolean;
@@ -17,6 +28,7 @@ export interface CLIArguments {
   baselineGenerate: boolean;
   baselineUpdate: boolean;
   baselineCheck: boolean;
+  confidence?: Partial<ConfidenceConfig>;
 }
 
 export interface ConfigFile {
@@ -24,6 +36,7 @@ export interface ConfigFile {
   aggressiveMode?: boolean;
   excludePatterns?: string[];
   excludedLanguages?: string[];
+  confidence?: Partial<ConfidenceConfig>;
 }
 
 /**
@@ -153,6 +166,11 @@ function mergeConfig(args: CLIArguments, config: ConfigFile): void {
 
   if (config.excludePatterns) {
     args.exclude.push(...config.excludePatterns);
+  }
+
+  // Merge confidence configuration
+  if (config.confidence) {
+    args.confidence = { ...args.confidence, ...config.confidence };
   }
 
   // Note: excludedLanguages will be handled by the analyzer

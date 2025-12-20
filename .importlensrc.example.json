@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "description": "ImportLens configuration file example",
+  "safeMode": true,
+  "aggressiveMode": false,
+  "excludePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/*.min.js"
+  ],
+  "excludedLanguages": [
+    "markdown",
+    "plaintext"
+  ],
+  "confidence": {
+    "baseConfidence": 0.9,
+    "sideEffectMultiplier": 0.7,
+    "knownSourceMultiplier": 1.1,
+    "unknownModuleMultiplier": 0.6,
+    "specificCodeMultiplier": 1.2
+  }
+}
