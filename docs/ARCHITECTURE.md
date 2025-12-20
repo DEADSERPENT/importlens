@@ -129,6 +129,74 @@ interface LanguageAdapter {
 - **CLIAnalyzer**: Headless import analysis
 - **OutputFormatter**: Multiple format support (text, JSON, GitHub, JUnit)
 
+#### 6. Baseline Manager (`cli/BaselineManager.ts`)
+
+**Purpose**: Technical debt tracking and historical trend analysis.
+
+**Responsibilities**:
+- Manage baseline files (`.importlens-baseline.json`)
+- Capture historical snapshots automatically
+- Migrate between baseline versions (v2.0.0 → v3.0.0)
+- Prune history to maintain 30-snapshot rolling window
+- Compare current state against baseline
+
+**Key Features**:
+- **Automatic Snapshots**: Captures state before each `--baseline-update`
+- **Version Migration**: Seamlessly upgrades v2.0.0 → v3.0.0
+- **Rolling History**: Maintains last 30 snapshots with auto-pruning
+- **Shared Data**: CLI and extension read same baseline file
+
+**Data Structures**:
+```typescript
+interface HistoricalSnapshot {
+  timestamp: string;              // ISO 8601 format
+  metadata: {
+    totalFiles: number;
+    totalUnusedImports: number;
+  };
+  version: string;                // Snapshot format version
+}
+
+interface BaselineFile {
+  version: string;                // "3.0.0"
+  createdAt: string;
+  updatedAt: string;
+  entries: BaselineEntry[];
+  metadata: { ... };
+  history?: HistoricalSnapshot[]; // Rolling 30-snapshot history
+}
+```
+
+#### 7. Statistics Panel (`ui/StatisticsPanel.ts`)
+
+**Purpose**: Visual analytics dashboard for unused imports.
+
+**Features**:
+- Real-time statistics collection from workspace
+- Chart.js visualization (bar, doughnut, line charts)
+- Historical trend analysis (when baseline exists)
+- Top files heatmap
+
+**Charts**:
+- **Language Distribution**: Bar chart of unused imports by language
+- **Confidence Distribution**: Doughnut chart of high/medium/low confidence
+- **Historical Trends**: Dual Y-axis line chart (unused imports + files analyzed)
+
+**Data Flow**:
+```
+Command Triggered → collectStatistics()
+     ↓
+Analyze All Workspace Docs → findUnusedImports()
+     ↓
+Load Baseline File (if exists) → loadBaselineFile()
+     ↓
+Merge Current Stats + History → StatisticsData
+     ↓
+Generate HTML with Chart.js → getHtmlForWebview()
+     ↓
+Render in Webview Panel
+```
+
 ### Data Flow
 
 #### VS Code Extension Flow

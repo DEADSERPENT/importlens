@@ -5,6 +5,34 @@ All notable changes to ImportLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-12-20
+
+### Major Features
+
+**Historical Debt Tracking**
+- Automatic snapshot capture on every `--baseline-update` (rolling 30-snapshot history)
+- Visual trend chart in Statistics Panel with dual Y-axis (unused imports + files analyzed)
+- Seamless v2.0.0 → v3.0.0 migration with backward compatibility
+- Shared baseline data between CLI and VS Code extension
+
+### Breaking Changes
+
+- Baseline file format bumped to v3.0.0 (includes `history` array)
+- Auto-migration from v2.0.0 on first load (fully backward compatible)
+
+### Improvements
+
+- CLI displays snapshot count in console output
+- Extension reads `.importlens-baseline.json` for trend visualization
+- Chart.js line chart with filled areas and custom styling
+- Empty state UI when no history exists
+
+### Technical
+
+- New interfaces: `HistoricalSnapshot`, updated `BaselineFile` and `StatisticsData`
+- New methods: `migrateBaselineToV3()`, `captureSnapshot()`, `pruneHistory()`, `loadBaselineFile()`
+- Files modified: `BaselineManager.ts`, `StatisticsPanel.ts`, `package.json`
+
 ## [2.0.0] - 2025-12-19
 
 ### 🎯 Major Features

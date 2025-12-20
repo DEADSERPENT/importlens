@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ImportAnalyzer } from '../core/ImportAnalyzer';
+import type { BaselineFile, HistoricalSnapshot } from '../cli/BaselineManager';
 
 /**
  * Statistics data structure
@@ -16,6 +18,7 @@ export interface StatisticsData {
   };
   filesAnalyzed: number;
   topFiles: Array<{ path: string; count: number }>;
+  history?: HistoricalSnapshot[];  // Historical data from baseline file
 }
 
 /**
@@ -113,12 +116,47 @@ export class StatisticsPanel {
 
     const stats = this.analyzer.getStatistics(allUnusedImports);
 
+    // Load baseline file to get history
+    const baseline = await this.loadBaselineFile();
+
     return {
       ...stats,
       byLanguage,
       filesAnalyzed: documents.length,
-      topFiles
+      topFiles,
+      history: baseline?.history || undefined
     };
+  }
+
+  /**
+   * Load baseline file from workspace root
+   * Returns null if not found or on error (gracefully degrades)
+   */
+  private async loadBaselineFile(): Promise<BaselineFile | null> {
+    try {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        return null;  // No workspace open
+      }
+
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const baselinePath = path.join(workspaceRoot, '.importlens-baseline.json');
+
+      // Check if file exists
+      const fileUri = vscode.Uri.file(baselinePath);
+      try {
+        const content = await vscode.workspace.fs.readFile(fileUri);
+        const text = Buffer.from(content).toString('utf-8');
+        const baseline = JSON.parse(text) as BaselineFile;
+
+        return baseline;
+      } catch {
+        return null;  // File doesn't exist or parsing failed
+      }
+    } catch (error) {
+      console.error('Error loading baseline file:', error);
+      return null;  // Gracefully degrade
+    }
   }
 
   /**
@@ -249,6 +287,9 @@ export class StatisticsPanel {
           border: 1px solid var(--vscode-widget-border);
           border-radius: 4px;
           padding: 20px;
+        }
+        .chart-card-full {
+          grid-column: 1 / -1;  /* Span all columns for full width */
         }
         .chart-title {
           font-size: 18px;
@@ -389,6 +430,46 @@ export class StatisticsPanel {
         </div>
       </div>
 
+      ${stats.history && stats.history.length > 0 ? `
+      <div class="charts-container">
+        <div class="chart-card chart-card-full">
+          <div class="chart-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 6px;">
+              <path d="M3 3v18h18" stroke="#4FC3F7" stroke-width="2" stroke-linecap="round"/>
+              <path d="M7 15l4-4 3 3 5-8" stroke="#66BB6A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="7" cy="15" r="2" fill="#66BB6A"/>
+              <circle cx="11" cy="11" r="2" fill="#66BB6A"/>
+              <circle cx="14" cy="14" r="2" fill="#66BB6A"/>
+              <circle cx="19" cy="6" r="2" fill="#66BB6A"/>
+            </svg>
+            Technical Debt Trends (Last ${stats.history.length} Snapshots)
+          </div>
+          <canvas id="historicalChart"></canvas>
+        </div>
+      </div>
+      ` : stats.history && stats.history.length === 0 ? `
+      <div class="charts-container">
+        <div class="chart-card chart-card-full">
+          <div class="chart-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 6px;">
+              <rect x="4" y="14" width="4" height="7" rx="1" fill="#66BB6A" opacity="0.8"/>
+              <rect x="10" y="8" width="4" height="13" rx="1" fill="#FFA726" opacity="0.8"/>
+              <rect x="16" y="4" width="4" height="17" rx="1" fill="#EF5350" opacity="0.8"/>
+            </svg>
+            Technical Debt Trends
+          </div>
+          <div style="text-align: center; padding: 40px; color: var(--vscode-descriptionForeground);">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" style="margin-bottom: 16px;">
+              <circle cx="12" cy="12" r="10" stroke="#4FC3F7" stroke-width="2" fill="none"/>
+              <path d="M12 6v6l4 2" stroke="#4FC3F7" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No Historical Data Yet</div>
+            <div style="font-size: 14px;">Run <code style="background: var(--vscode-textCodeBlock-background); padding: 2px 6px; border-radius: 3px;">importlens-cli --baseline-update</code> to start tracking trends over time.</div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
       <div class="heatmap">
         <div class="heatmap-title">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 8px;">
@@ -499,6 +580,121 @@ export class StatisticsPanel {
             }
           }
         });
+
+        // Historical Trends Chart (only if history data exists)
+        ${stats.history && stats.history.length > 0 ? `
+        const historicalData = ${JSON.stringify(stats.history)};
+
+        // Sort by timestamp (oldest to newest)
+        historicalData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        // Extract data for chart
+        const timestamps = historicalData.map(snapshot => {
+          const date = new Date(snapshot.timestamp);
+          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+        });
+
+        const totalUnusedImports = historicalData.map(snapshot =>
+          snapshot.metadata.totalUnusedImports
+        );
+
+        const totalFiles = historicalData.map(snapshot =>
+          snapshot.metadata.totalFiles
+        );
+
+        // Create historical trends chart
+        const historicalCtx = document.getElementById('historicalChart').getContext('2d');
+        new Chart(historicalCtx, {
+          type: 'line',
+          data: {
+            labels: timestamps,
+            datasets: [
+              {
+                label: 'Unused Imports',
+                data: totalUnusedImports,
+                borderColor: 'rgba(239, 83, 80, 0.8)',
+                backgroundColor: 'rgba(239, 83, 80, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(239, 83, 80, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Files Analyzed',
+                data: totalFiles,
+                borderColor: 'rgba(66, 165, 245, 0.8)',
+                backgroundColor: 'rgba(66, 165, 245, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(66, 165, 245, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 15
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  title: function(context) {
+                    return 'Snapshot: ' + context[0].label;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                  display: true,
+                  text: 'Unused Imports'
+                },
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                  display: true,
+                  text: 'Files Analyzed'
+                },
+                beginAtZero: true,
+                grid: {
+                  drawOnChartArea: false
+                }
+              }
+            }
+          }
+        });
+        ` : ''}
       </script>
     </body>
     </html>`;

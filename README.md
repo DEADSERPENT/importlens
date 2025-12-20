@@ -53,6 +53,8 @@ importlens-cli --check src/
 importlens-cli --baseline-update src/
 ```
 
+**Historical Tracking:** Track debt trends over time with automatic snapshots (30-snapshot rolling history). View Chart.js trends in Statistics Panel via `ImportLens: Show Import Statistics`.
+
 **Output formats:** `text` • `json` • `github` • `junit`
 
 ## ⚙️ Configuration

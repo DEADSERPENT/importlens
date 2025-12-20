@@ -2,7 +2,7 @@
   "name": "importlens",
   "displayName": "ImportLens",
   "description": "Intelligent import management with AST-based analysis, organization, and CI/CD integration",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
