@@ -1,11 +1,12 @@
 # ImportLens User Guide
 
-Complete guide for using ImportLens in VS Code and via CLI.
+Complete guide for using ImportLens v3.0.0 in VS Code and via CLI.
 
 ## Table of Contents
 
 - [VS Code Extension](#vs-code-extension)
 - [CLI Tool (npm)](#cli-tool-npm)
+- [Baseline Tracking & Historical Trends](#baseline-tracking--historical-trends)
 - [Configuration](#configuration)
 - [Examples](#examples)
 
@@ -273,6 +274,302 @@ CLI arguments override config file settings.
 
 ---
 
+## Baseline Tracking & Historical Trends
+
+ImportLens provides powerful baseline tracking and historical trend visualization to help teams manage technical debt over time.
+
+### What is Baseline Tracking?
+
+Baseline tracking allows you to:
+- **Capture current state** of unused imports as a reference point
+- **Compare new code** against the baseline to catch NEW issues only
+- **Track trends over time** with automatic snapshot history
+- **Adopt incrementally** without blocking existing deployments
+
+### Basic Baseline Workflow
+
+#### 1. Generate Initial Baseline
+
+Create a baseline file that captures all current unused imports:
+
+```bash
+importlens-cli --baseline-generate src/
+```
+
+This creates `.importlens-baseline.json` in your project root with:
+- All current unused imports (accepted as technical debt)
+- Metadata (total files, total unused imports)
+- Empty history array (ready for snapshots)
+
+#### 2. Check for New Issues
+
+Run checks that only fail on NEW unused imports:
+
+```bash
+importlens-cli --check src/
+```
+
+Exit codes:
+- `0` - No new issues (existing baseline issues are OK)
+- `1` - New unused imports detected beyond baseline
+
+#### 3. Update Baseline
+
+When you intentionally accept new technical debt:
+
+```bash
+importlens-cli --baseline-update src/
+```
+
+This automatically:
+- **Captures snapshot** of current state BEFORE updating
+- **Updates baseline** with new entries
+- **Adds to history** (maintains rolling 30-snapshot limit)
+- **Prunes old snapshots** if history exceeds 30
+
+### Historical Snapshots
+
+Every `--baseline-update` automatically captures a point-in-time snapshot of your technical debt.
+
+#### Snapshot Data Structure
+
+Each snapshot contains:
+```json
+{
+  "timestamp": "2025-12-20T10:30:00.000Z",
+  "metadata": {
+    "totalFiles": 42,
+    "totalUnusedImports": 87
+  },
+  "version": "1.0.0"
+}
+```
+
+#### Rolling 30-Snapshot History
+
+- History automatically **prunes** to keep only the last 30 snapshots
+- Oldest snapshots are removed first (FIFO)
+- Chronological order is maintained
+- No manual cleanup required
+
+### Viewing Historical Trends
+
+#### VS Code Statistics Panel
+
+View trend charts showing debt evolution:
+
+```
+Ctrl+Shift+P → ImportLens: Show Import Statistics
+```
+
+The Statistics Panel displays:
+- **Trend Chart** - Dual Y-axis line chart (Chart.js)
+  - Left axis: Unused imports count
+  - Right axis: Files analyzed count
+  - X-axis: Timestamps (formatted as "Dec 20, '25")
+- **Current Statistics** - Latest snapshot data
+- **Language Distribution** - Bar chart by language
+- **Confidence Distribution** - Doughnut chart
+
+#### Empty History State
+
+If no history exists yet, the panel shows:
+```
+No Historical Data Yet
+Run importlens-cli --baseline-update to start tracking trends.
+```
+
+### Baseline Migration (v2.0.0 → v3.0.0)
+
+**Automatic Migration:**
+- v2.0.0 baselines are automatically detected
+- Console message: `> Migrating baseline from v2.0.0 to v3.0.0...`
+- Adds `history: []` field (empty initially)
+- First `--baseline-update` captures first snapshot
+
+**No Action Required:**
+Existing v2.0.0 baseline files work seamlessly. The migration happens automatically on first load.
+
+### CI/CD Integration with Baseline
+
+#### GitHub Actions - Baseline Mode
+
+```yaml
+name: Check Unused Imports
+
+on: [pull_request]
+
+jobs:
+  importlens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install ImportLens
+        run: npm install -g importlens
+
+      - name: Check for new unused imports
+        run: importlens-cli --check --format=github src/
+```
+
+This workflow:
+- Automatically uses `.importlens-baseline.json` if it exists
+- Only fails on NEW issues beyond baseline
+- Shows GitHub annotations for new problems
+- Allows incremental adoption without blocking PRs
+
+#### Updating Baseline in CI
+
+```yaml
+- name: Update baseline (on main branch only)
+  if: github.ref == 'refs/heads/main'
+  run: |
+    importlens-cli --baseline-update src/
+    git config user.name "GitHub Actions"
+    git config user.email "actions@github.com"
+    git add .importlens-baseline.json
+    git commit -m "chore: update import baseline [skip ci]"
+    git push
+```
+
+### Baseline File Format (v3.0.0)
+
+**.importlens-baseline.json:**
+```json
+{
+  "version": "3.0.0",
+  "createdAt": "2025-12-20T10:00:00.000Z",
+  "updatedAt": "2025-12-20T15:30:00.000Z",
+  "entries": [
+    {
+      "filePath": "src/utils/helpers.ts",
+      "line": 3,
+      "importStatement": "import { debounce, throttle } from 'lodash';",
+      "symbols": ["throttle"]
+    }
+  ],
+  "metadata": {
+    "totalFiles": 42,
+    "totalUnusedImports": 87
+  },
+  "history": [
+    {
+      "timestamp": "2025-12-19T14:00:00.000Z",
+      "metadata": {
+        "totalFiles": 40,
+        "totalUnusedImports": 95
+      },
+      "version": "1.0.0"
+    },
+    {
+      "timestamp": "2025-12-20T10:00:00.000Z",
+      "metadata": {
+        "totalFiles": 42,
+        "totalUnusedImports": 87
+      },
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+### CLI Options for Baseline
+
+```
+BASELINE OPTIONS:
+  --baseline=<file>         Path to baseline file (default: .importlens-baseline.json)
+  --baseline-generate       Generate new baseline from current results
+  --baseline-update         Update baseline and capture snapshot
+  --baseline-check          Explicitly check against baseline
+```
+
+### Best Practices
+
+#### 1. Commit Baseline to Git
+```bash
+git add .importlens-baseline.json
+git commit -m "chore: add import baseline"
+```
+
+This allows team members to:
+- Share the same baseline
+- Track baseline changes in PR diffs
+- See when technical debt was accepted
+
+#### 2. Regular Updates
+```bash
+# After cleaning up imports
+importlens-cli --baseline-update src/
+
+# View the improvement in Statistics Panel
+```
+
+#### 3. CI/CD Strategy
+```
+Development → Check against baseline (fail on new issues)
+Main Branch → Update baseline (accept new debt, capture snapshot)
+Statistics Panel → Monitor trends over time
+```
+
+#### 4. Team Adoption
+```bash
+# Step 1: Generate baseline (accept current state)
+importlens-cli --baseline-generate src/
+
+# Step 2: Add to CI/CD (prevent new issues)
+# (See GitHub Actions example above)
+
+# Step 3: Clean up over time
+importlens-cli --fix --safe-mode src/
+importlens-cli --baseline-update src/
+
+# Step 4: Track progress in Statistics Panel
+```
+
+### Troubleshooting Baseline
+
+#### Baseline Not Found
+```bash
+# Check if baseline exists
+ls -la .importlens-baseline.json
+
+# Generate new baseline
+importlens-cli --baseline-generate src/
+```
+
+#### Invalid Baseline Format
+```
+Error: Failed to load baseline: Invalid baseline file format
+```
+
+**Solution:**
+```bash
+# Backup old baseline
+mv .importlens-baseline.json .importlens-baseline.json.backup
+
+# Generate fresh baseline
+importlens-cli --baseline-generate src/
+```
+
+#### History Not Showing in Statistics Panel
+
+**Possible causes:**
+1. No snapshots captured yet
+   - Solution: Run `importlens-cli --baseline-update src/` at least once
+2. Baseline file not in workspace root
+   - Solution: Ensure `.importlens-baseline.json` is in the same directory as your workspace root
+3. Extension cache issue
+   - Solution: Restart VS Code
+
+#### Snapshot Count Exceeds 30
+
+This is normal behavior:
+- History automatically prunes to 30 snapshots
+- Oldest snapshots are removed first
+- No manual action required
+
+---
+
 ## Configuration
 
 ### VS Code Settings File
@@ -397,7 +694,7 @@ importlens-cli --check src/**/*.{ts,py,java,go,rs}
 
 ## 🔍 Technical Architecture: Dual-Engine Analysis
 
-ImportLens v2.0.0 utilizes a sophisticated dual-engine approach to ensure maximum accuracy across different environments:
+ImportLens utilizes a sophisticated dual-engine approach to ensure maximum accuracy across different environments:
 
 ### VS Code Extension (LSP-Based)
 The extension leverages the full power of the **Language Server Protocol (LSP)**:
@@ -430,18 +727,21 @@ For other languages (Python, Java, Go, Rust, C++), the CLI uses pattern-based de
 | **TypeScript/JavaScript only** | Either | Both provide 100% accuracy |
 | **Multi-language projects** | VS Code Extension | LSP support for all languages |
 
-### Baseline Tracking (v2.0.0)
+### Baseline Tracking & Historical Trends
 
-The CLI's new **baseline system** allows incremental adoption:
+The CLI's **baseline system** with historical tracking allows incremental adoption and trend visualization:
 ```bash
 # Generate baseline to capture existing technical debt
 importlens-cli --baseline-generate src/
 
 # CI/CD checks only fail on NEW unused imports
 importlens-cli --check src/
+
+# Update baseline and capture historical snapshot
+importlens-cli --baseline-update src/
 ```
 
-This enables teams to adopt ImportLens without blocking deployments while preventing new technical debt.
+This enables teams to adopt ImportLens without blocking deployments while preventing new technical debt and tracking cleanup progress over time.
 
 ---
 

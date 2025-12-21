@@ -3,63 +3,77 @@
 [![NPM](https://img.shields.io/npm/v/importlens?color=CB3837&logo=npm)](https://www.npmjs.com/package/importlens)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SAMARTHASMG14.importlens?logo=visualstudiocode&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)
 
+**Clean unused imports across multiple languages in VS Code and CI/CD.**
 
-**Clean unused imports across 7+ languages in VS Code and CI/CD with AST-powered precision.**
+Detects and removes unused imports using AST analysis for TypeScript/JavaScript and LSP for other languages. Features symbol-level precision, baseline tracking, and historical trend visualization.
 
-ImportLens detects and removes unused imports using AST analysis for TypeScript/JavaScript and LSP for other languages. Features symbol-level precision, import organization, Quick Fixes, and baseline tracking for CI/CD.
+## Features
 
-### Core Features
-**Multi-Language** • **Safe Mode** • **Symbol-Level Precision** • **Visual Dashboard** • **Status Bar** • **CLI Tool** • **Diff Preview**
+**Multi-Language Support** • **Safe Mode** • **Symbol-Level Precision** • **Baseline Tracking** • **Historical Trends** • **Visual Dashboard**
 
-**Supported**: TypeScript/JS (AST), Python, Java, Go, Rust, C/C++ + 50+ via LSP adapter
+**Supported Languages:**
 
-## 🚀 Installation
+🟦 **TypeScript/JavaScript** • 🐍 **Python** • ☕ **Java** • 🔵 **Go** • 🦀 **Rust** • ⚙️ **C/C++**
+
+*Plus 50+ additional languages via Language Server Protocol (LSP) support*
+
+## Installation
 
 **VS Code:** Extensions → Search "ImportLens" → Install
+
 **CLI:** `npm install -g importlens`
 
-## 📖 Usage
+## Usage
 
-### VS Code Commands (`Ctrl+Shift+P`)
-- `ImportLens: Clean Current File` - Remove unused imports
-- `ImportLens: Clean Workspace` - Clean all workspace files
-- `ImportLens: Organize Imports` - Sort and deduplicate (TS/JS)
-- `ImportLens: Show Import Statistics` - View analytics dashboard
+### VS Code Extension
 
-### Quick Fixes
-Hover over unused imports → Click lightbulb → Remove symbol or entire import
+```
+Ctrl+Shift+P → ImportLens: Clean Current File
+```
 
 ### CLI Tool
 
-**Check for unused imports:**
 ```bash
+# Check for unused imports
 importlens-cli --check src/
-```
 
-**Auto-fix with safe mode:**
-```bash
+# Auto-fix with safe mode
 importlens-cli --fix --safe-mode src/
-```
 
-**Baseline workflow (CI/CD):**
-```bash
-# Generate baseline (captures existing technical debt)
+# Baseline workflow (CI/CD)
 importlens-cli --baseline-generate src/
-
-# Check for NEW issues only
 importlens-cli --check src/
-
-# Update baseline when accepting new debt
 importlens-cli --baseline-update src/
 ```
 
-**Historical Tracking:** Track debt trends over time with automatic snapshots (30-snapshot rolling history). View Chart.js trends in Statistics Panel via `ImportLens: Show Import Statistics`.
+## Example
 
-**Output formats:** `text` • `json` • `github` • `junit`
+```typescript
+// Before
+import React from 'react';
+import { useState, useEffect } from 'react';
+import './styles.css';
 
-## ⚙️ Configuration
+// After (Safe Mode)
+import React from 'react';
+import './styles.css';
+```
 
-**VS Code Settings:**
+## CI/CD Integration
+
+**GitHub Actions:**
+```yaml
+- name: Check unused imports
+  run: |
+    npm install -g importlens
+    importlens-cli --check --format=github src/
+```
+
+**Output Formats:** `text` • `json` • `github` • `junit`
+
+## Configuration
+
+**VS Code:** `settings.json`
 ```json
 {
   "importlens.enableOnSave": true,
@@ -68,60 +82,17 @@ importlens-cli --baseline-update src/
 }
 ```
 
-**CLI Config:** Create `.importlensrc.json` with `safeMode`, `excludePatterns`, etc.
+**CLI:** `.importlensrc.json` in project root
 
-## 📋 Example
-
-```typescript
-// Before
-import React from 'react';
-import { useState, useEffect } from 'react';
-import './styles.css';
-
-// After (Safe Mode) - preserves side-effects
-import React from 'react';
-import './styles.css';
-```
-
-## 🔧 CI/CD Integration
-
-### GitHub Actions
-
-**Standard Check:**
-```yaml
-- name: Check unused imports
-  run: |
-    npm install -g importlens
-    importlens-cli --check --format=github src/
-```
-
-**Baseline Mode (Incremental Adoption):**
-```yaml
-- name: Check for new unused imports
-  run: |
-    npm install -g importlens
-    importlens-cli --check src/
-```
-
-**Templates:** See `templates/github-action.yml` for complete workflows.
-
-**Pre-commit Hook:** `npm run setup:hooks`
-
-## 🏗️ Architecture
-
-ImportLens uses a dual-engine approach:
-- **VS Code Extension:** LSP-based (tsserver, Pylance, etc.) for maximum accuracy
-- **CLI Tool:** AST-based for standalone headless operation in CI/CD
-
-## 📚 Documentation
+## Documentation
 
 - **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical deep-dive
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical design
+- **[Vision](docs/VISION.md)** - Project roadmap
 - **[Contributing](CONTRIBUTING.md)** - Development guide
-- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Codebase organization
 
-## 📄 License
+## License
 
 MIT © 2025 ImportLens Contributors
 
-**Repository:** [github.com/DEADSERPENT/importlens](https://github.com/DEADSERPENT/importlens) • **Issues:** [Report a bug](https://github.com/DEADSERPENT/importlens/issues) • **Version:** 2.0.0
+**Links:** [GitHub](https://github.com/DEADSERPENT/importlens) • [Issues](https://github.com/DEADSERPENT/importlens/issues) • [NPM](https://www.npmjs.com/package/importlens) • [VSCODE](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)
