@@ -77,7 +77,8 @@ export class BaselineManager {
       metadata: {
         totalFiles: results.length,
         totalUnusedImports: entries.length
-      }
+      },
+      history: []  // Initialize empty history array for v3.0.0
     };
 
     return baseline;

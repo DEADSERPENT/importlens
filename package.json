@@ -180,6 +180,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "node ./out/test/runTest.js",
+    "test:cli": "mocha ./out/test/cli-integration.test.js --ui tdd --timeout 60000",
+    "test:all": "npm run test && npm run test:cli",
     "lint": "eslint src --ext ts",
     "cli": "node ./out/src/cli.js",
     "package:vscode": "vsce package",
