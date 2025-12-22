@@ -7,8 +7,6 @@ import * as vscode from 'vscode';
 import {
   TeamAnalyticsEngine,
   TeamDashboardData,
-  FileHealthMetric,
-  LanguageBreakdown,
 } from '../analytics/TeamAnalytics';
 
 export class TeamDashboardPanel {
