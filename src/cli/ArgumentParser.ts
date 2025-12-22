@@ -28,6 +28,8 @@ export interface CLIArguments {
   baselineGenerate: boolean;
   baselineUpdate: boolean;
   baselineCheck: boolean;
+  analytics: boolean;
+  analyticsOutput?: string;
   confidence?: Partial<ConfidenceConfig>;
 }
 
@@ -56,7 +58,8 @@ export function parseArgs(argv: string[]): CLIArguments {
     exitOnError: true,
     baselineGenerate: false,
     baselineUpdate: false,
-    baselineCheck: false
+    baselineCheck: false,
+    analytics: false
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -97,6 +100,11 @@ export function parseArgs(argv: string[]): CLIArguments {
       args.baselineUpdate = true;
     } else if (arg === '--baseline-check' || arg === '--check-baseline') {
       args.baselineCheck = true;
+    } else if (arg === '--analytics') {
+      args.analytics = true;
+    } else if (arg.startsWith('--analytics-output=')) {
+      args.analytics = true;
+      args.analyticsOutput = arg.split('=')[1];
     } else if (!arg.startsWith('--')) {
       args.files.push(arg);
     } else {
@@ -104,8 +112,8 @@ export function parseArgs(argv: string[]): CLIArguments {
     }
   }
 
-  // Default to check mode if neither check nor fix specified
-  if (!args.check && !args.fix) {
+  // Default to check mode if neither check nor fix specified (unless in analytics mode)
+  if (!args.check && !args.fix && !args.analytics) {
     args.check = true;
   }
 

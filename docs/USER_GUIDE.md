@@ -35,7 +35,9 @@ Access via Command Palette (Ctrl+Shift+P / Cmd+Shift+P):
 - **ImportLens: Clean Current File** - Remove unused imports from active file
 - **ImportLens: Clean Workspace** - Clean all files in workspace
 - **ImportLens: Show Import Statistics** - View dashboard with charts
+- **ImportLens: Show Team Dashboard** - View team-wide analytics and health scores (v3.1.0+)
 - **ImportLens: Toggle Safe Mode** - Switch between safe/aggressive cleanup
+- **ImportLens: Organize Imports** - Sort and organize imports (TypeScript/JavaScript only)
 
 #### Context Menu
 
@@ -90,6 +92,29 @@ Bottom-right corner shows:
    - Files with most issues
    - Visual charts and graphs
 ```
+
+#### View Team Dashboard (v3.1.0+)
+
+```
+1. Ctrl+Shift+P → "ImportLens: Show Team Dashboard"
+2. Wait for workspace analysis
+3. View interactive dashboard with:
+   - Overall health score (0-100)
+   - Files analyzed count
+   - Language breakdown
+   - Files needing attention
+   - Top improved files
+4. Click files to open them
+5. Export reports (JSON/CSV) for stakeholders
+```
+
+**Team Dashboard Features:**
+- **Health Score**: Overall workspace import health (0-100)
+- **Language Breakdown**: Per-language statistics
+- **File Rankings**: Identify files needing attention
+- **Trend Analysis**: Track improvement over time
+- **Export Options**: Generate JSON or CSV reports
+- **Custom Icons**: Theme-aware SVG icons throughout
 
 ### Settings
 
@@ -271,6 +296,159 @@ Create `.importlensrc.json` in project root:
 ```
 
 CLI arguments override config file settings.
+
+---
+
+## Team Analytics (v3.1.0+)
+
+ImportLens provides workspace-wide analytics to help teams visualize import health, identify problem areas, and track improvements over time.
+
+### Generate Analytics Report
+
+#### Basic Analytics
+```bash
+# Generate analytics for current directory
+importlens-cli --analytics .
+
+# Analyze specific directory
+importlens-cli --analytics src/
+```
+
+Output (stderr - summary):
+```
+═══════════════════════════════════════════════════════════
+TEAM ANALYTICS SUMMARY
+═══════════════════════════════════════════════════════════
+
+Overall Health Score: 87/100
+
+Files Analyzed: 42
+Total Imports: 312
+Unused Imports: 28
+
+Top Languages:
+  • TypeScript           - 28 files, 18 unused (Score: 92/100)
+  • JavaScript           - 10 files, 8 unused (Score: 78/100)
+  • Python               - 4 files, 2 unused (Score: 95/100)
+
+Files Needing Attention:
+  • helpers.ts (Score: 45/100)
+  • utils.js (Score: 52/100)
+  • config.ts (Score: 60/100)
+
+═══════════════════════════════════════════════════════════
+```
+
+Output (stdout - JSON):
+```json
+{
+  "generatedAt": "2025-12-22T14:02:08.570Z",
+  "projectName": "my-project",
+  "summary": {
+    "overallHealthScore": 87,
+    "totalFiles": 42,
+    "totalImports": 312,
+    "unusedImports": 28,
+    "trend": "stable"
+  },
+  "languageBreakdown": [
+    {
+      "language": "TypeScript",
+      "fileCount": 28,
+      "unusedImportCount": 18,
+      "healthScore": 92
+    }
+  ],
+  "filesNeedingAttention": [...],
+  "fileMetrics": [...]
+}
+```
+
+#### Save Analytics to File
+```bash
+# Save report to file
+importlens-cli --analytics --analytics-output=report.json src/
+
+# Custom output location
+importlens-cli --analytics --analytics-output=./reports/team-analytics.json src/
+```
+
+### Health Score System
+
+**Health scores** are calculated on a 0-100 scale:
+
+| Score | Status | Meaning |
+|-------|--------|---------|
+| 90-100 | Excellent | 0-10% unused imports |
+| 70-89 | Good | 11-30% unused imports |
+| 50-69 | Fair | 31-50% unused imports |
+| 0-49 | Poor | 50%+ unused imports |
+
+**Formula**: `healthScore = 100 - (unusedImports / totalImports * 100)`
+
+**Special cases**:
+- Files with 0 imports: Score = 100
+- Files with 0 unused: Bonus points for perfect score
+
+### Analytics Data Structure
+
+#### Summary
+- **overallHealthScore**: Workspace average (0-100)
+- **totalFiles**: Number of files analyzed
+- **totalImports**: Total import statements found
+- **unusedImports**: Total unused import count
+- **trend**: Overall trend (improving/declining/stable)
+
+#### Language Breakdown
+Per-language statistics:
+- **language**: Language name
+- **fileCount**: Files using this language
+- **unusedImportCount**: Total unused in this language
+- **healthScore**: Average health for this language
+
+#### File Metrics
+Individual file data:
+- **filePath**: Absolute path to file
+- **language**: Detected language
+- **totalImports**: Import count in this file
+- **unusedImports**: Unused count in this file
+- **healthScore**: File's health score (0-100)
+- **lastAnalyzed**: Timestamp
+
+### Use Cases
+
+#### Stakeholder Reports
+```bash
+# Generate monthly report for management
+importlens-cli --analytics --analytics-output=reports/monthly-$(date +%Y-%m).json src/
+```
+
+#### CI/CD Integration
+```yaml
+# GitHub Actions example
+- name: Generate Analytics
+  run: |
+    importlens-cli --analytics --analytics-output=analytics.json src/
+
+- name: Upload Report
+  uses: actions/upload-artifact@v3
+  with:
+    name: team-analytics
+    path: analytics.json
+```
+
+#### Track Improvement
+```bash
+# Before cleanup
+importlens-cli --analytics --analytics-output=before.json src/
+
+# After cleanup
+importlens-cli --fix src/
+importlens-cli --analytics --analytics-output=after.json src/
+
+# Compare results
+diff before.json after.json
+```
 
 ---
 

@@ -5,6 +5,94 @@ All notable changes to ImportLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-12-22
+
+### Major Features - Phase 6: Enhanced Team Analytics
+
+**Team Dashboard (VS Code)**
+- Interactive webview dashboard with workspace-wide analytics
+- Import health score (0-100) calculated for each file and overall workspace
+- Language breakdown with file counts and unused import statistics
+- Files needing attention identified by low health scores
+- Top improved files tracking based on trend analysis
+- Export functionality (JSON/CSV) for stakeholder reports
+- Custom SVG icon system (replaced all Unicode emojis)
+- Theme-aware styling that adapts to VS Code themes
+- Click-to-open file navigation
+
+**CLI Analytics**
+- New `--analytics` flag for generating team analytics reports
+- `--analytics-output=<file>` to save reports to file
+- JSON output format for automation and integration
+- Terminal-friendly summary display
+- Same analytics engine shared with VS Code extension
+
+**Analytics Engine**
+- Health score calculation with configurable thresholds
+- Trend detection (improving/declining/stable) with 2% threshold
+- File-level metrics tracking (imports, unused, health score, language)
+- Team-level aggregation and statistics
+- Language breakdown analytics
+
+### Improvements
+
+**Icon System**
+- Replaced all Unicode emojis with custom SVG icons in webview
+- Text-based indicators for CLI output ([OK], [WARN], [ERROR], [SUCCESS])
+- Theme-aware icons using currentColor for VS Code compatibility
+- Reusable SVG symbol definitions for consistency
+
+**Code Quality**
+- New analytics module (`src/analytics/TeamAnalytics.ts`)
+- Clean separation of concerns (analytics, UI, CLI)
+- Full TypeScript type safety
+- Comprehensive test coverage (46 test cases, 100% pass rate)
+
+### Technical
+
+**New Files**
+- `src/analytics/TeamAnalytics.ts` - Core analytics engine with HealthScoreCalculator
+- `src/ui/TeamDashboardPanel.ts` - Webview dashboard UI
+- `docs/TEST_REPORT.md` - Comprehensive test report
+
+**Modified Files**
+- `src/extension.ts` - Added Team Dashboard command and analytics integration
+- `src/cli.ts` - Added analytics mode and report generation
+- `src/cli/ArgumentParser.ts` - Added `--analytics` flag support
+- `package.json` - Added Team Dashboard command, updated version to 3.1.0
+
+**New Interfaces**
+- `FileHealthMetric` - Individual file metrics
+- `DeveloperMetric` - Developer contribution tracking
+- `TeamHealthScore` - Overall workspace health
+- `LanguageBreakdown` - Per-language statistics
+- `TeamDashboardData` - Complete dashboard data structure
+- `ComparisonMetric` - Historical comparison data
+- `AnalyticsExportData` - Export format
+
+### Commands
+
+**VS Code**
+- `ImportLens: Show Team Dashboard` - Opens interactive analytics dashboard
+
+**CLI**
+- `importlens-cli --analytics <files>` - Generate analytics report
+- `importlens-cli --analytics --analytics-output=report.json <files>` - Save to file
+
+### Backward Compatibility
+
+- Fully backward compatible with v3.0.x
+- All existing features continue to work
+- No breaking changes
+- VS Code Extension and CLI Tool both preserved
+
+### Testing
+
+- 46 test cases executed
+- 100% pass rate
+- Full regression testing completed
+- Production ready
+
 ## [3.0.1] - 2025-12-22
 
 ### Markdown files upgradation

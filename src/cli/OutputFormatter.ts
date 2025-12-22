@@ -32,19 +32,19 @@ export class OutputFormatter {
 
     for (const result of results) {
       if (result.error) {
-        lines.push(`❌ ${result.filePath}`);
-        lines.push(`   Error: ${result.error}\n`);
+        lines.push(`[ERROR] ${result.filePath}`);
+        lines.push(`        ${result.error}\n`);
         continue;
       }
 
       if (result.unusedImports.length === 0) {
-        lines.push(`✓ ${result.filePath} - No unused imports`);
+        lines.push(`[OK] ${result.filePath} - No unused imports`);
         continue;
       }
 
       totalIssues += result.unusedImports.length;
 
-      lines.push(`\n⚠️  ${result.filePath}`);
+      lines.push(`\n[WARN] ${result.filePath}`);
       lines.push(`   Found ${result.unusedImports.length} unused import(s):\n`);
 
       for (const unused of result.unusedImports) {

@@ -12,12 +12,15 @@ import { SafeEditExecutor } from './core/SafeEditExecutor';
 import { DiagnosticListener } from './core/DiagnosticListener';
 import { StatisticsPanel } from './ui/StatisticsPanel';
 import { QuickFixProvider } from './ui/QuickFixProvider';
+import { TeamDashboardPanel } from './ui/TeamDashboardPanel';
 import type { ConfidenceConfig } from './cli/ArgumentParser';
+import { TeamAnalyticsEngine, HealthScoreCalculator } from './analytics/TeamAnalytics';
 
 let diagnosticListener: DiagnosticListener | null = null;
 let analyzer: ImportAnalyzer | null = null;
 let executor: SafeEditExecutor | null = null;
 let statusBarItem: vscode.StatusBarItem;
+let teamAnalytics: TeamAnalyticsEngine;
 
 /**
  * Read confidence configuration from VS Code settings
@@ -76,6 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
   analyzer = new ImportAnalyzer(adapterRegistry, confidenceConfig);
   executor = new SafeEditExecutor(adapterRegistry);
   diagnosticListener = new DiagnosticListener(analyzer, updateStatusBar);
+  teamAnalytics = new TeamAnalyticsEngine();
 
   // Register Quick Fix provider for all languages
   const quickFixProvider = new QuickFixProvider(analyzer, adapterRegistry);
@@ -115,7 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Initial status bar update
   updateStatusBar();
 
-  vscode.window.showInformationMessage('ImportLens activated! 🔍');
+  vscode.window.showInformationMessage('ImportLens activated!');
 }
 
 /**
@@ -195,7 +199,7 @@ function registerCommands(context: vscode.ExtensionContext) {
       const unusedImports = await analyzer.findUnusedImports(editor.document);
 
       if (unusedImports.length === 0) {
-        vscode.window.showInformationMessage('No unused imports found! ✓');
+        vscode.window.showInformationMessage('No unused imports found!');
         return;
       }
 
@@ -297,6 +301,72 @@ function registerCommands(context: vscode.ExtensionContext) {
     }
   );
 
+  // Command: Show Team Dashboard
+  const showTeamDashboardCommand = vscode.commands.registerCommand(
+    'importlens.showTeamDashboard',
+    async () => {
+      if (!analyzer) {
+        return;
+      }
+
+      // Collect analytics data from workspace
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Analyzing workspace for team dashboard',
+          cancellable: false
+        },
+        async (progress) => {
+          // Clear existing metrics
+          teamAnalytics.clear();
+
+          // Get all text documents in workspace
+          const documents = vscode.workspace.textDocuments.filter(doc =>
+            !doc.isUntitled && doc.uri.scheme === 'file'
+          );
+
+          for (let i = 0; i < documents.length; i++) {
+            const document = documents[i];
+            progress.report({
+              message: `Analyzing ${vscode.workspace.asRelativePath(document.uri)} (${i + 1}/${documents.length})`,
+              increment: (100 / documents.length)
+            });
+
+            try {
+              const unusedImports = await analyzer!.findUnusedImports(document);
+
+              // Count total imports (approximation from document)
+              const text = document.getText();
+              const importRegex = /^import\s+/gm;
+              const totalImports = (text.match(importRegex) || []).length;
+
+              // Calculate health score
+              const healthScore = HealthScoreCalculator.calculateFileScore(
+                totalImports,
+                unusedImports.length
+              );
+
+              // Add to analytics
+              teamAnalytics.addFileMetric({
+                filePath: document.uri.fsPath,
+                language: document.languageId,
+                totalImports,
+                unusedImports: unusedImports.length,
+                healthScore,
+                lastAnalyzed: new Date(),
+              });
+            } catch (error) {
+              console.error(`Error analyzing ${document.uri.fsPath}:`, error);
+            }
+          }
+
+          // Show the team dashboard
+          TeamDashboardPanel.show(context.extensionUri, teamAnalytics);
+        }
+      );
+    }
+  );
+
   // Command: Toggle Safe Mode
   const toggleSafeModeCommand = vscode.commands.registerCommand(
     'importlens.toggleSafeMode',
@@ -307,8 +377,8 @@ function registerCommands(context: vscode.ExtensionContext) {
 
       const newValue = !currentValue;
       const message = newValue
-        ? 'Safe Mode enabled ✓ (Side-effect imports will be preserved)'
-        : 'Safe Mode disabled ⚠️ (All unused imports will be removed)';
+        ? 'Safe Mode enabled (Side-effect imports will be preserved)'
+        : 'Safe Mode disabled - WARNING: All unused imports will be removed';
 
       vscode.window.showInformationMessage(message);
     }
@@ -388,6 +458,7 @@ function registerCommands(context: vscode.ExtensionContext) {
     cleanCurrentFileCommand,
     cleanWorkspaceCommand,
     showStatisticsCommand,
+    showTeamDashboardCommand,
     toggleSafeModeCommand,
     organizeImportsCommand
   );

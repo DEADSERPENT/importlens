@@ -19,6 +19,7 @@ import { FileDiscovery } from './cli/FileDiscovery';
 import { CLIAnalyzer } from './cli/CLIAnalyzer';
 import { OutputFormatter } from './cli/OutputFormatter';
 import { BaselineManager } from './cli/BaselineManager';
+import { TeamAnalyticsEngine, HealthScoreCalculator } from './analytics/TeamAnalytics';
 
 async function main() {
   try {
@@ -52,6 +53,12 @@ async function main() {
     // Process files
     const results = await analyzer.analyzeFiles(files);
 
+    // Handle analytics mode
+    if (args.analytics) {
+      await generateAnalyticsReport(files, results, args.analyticsOutput);
+      process.exit(0);
+    }
+
     // Initialize baseline manager
     const baselineManager = new BaselineManager(args.baseline);
 
@@ -71,8 +78,8 @@ async function main() {
       const baseline = baselineManager.loadBaseline();
 
       if (!baseline) {
-        console.log('⚠️  No baseline found. Run with --baseline-generate to create one.');
-        console.log('   Continuing with standard analysis...\n');
+        console.log('[WARNING] No baseline found. Run with --baseline-generate to create one.');
+        console.log('          Continuing with standard analysis...\n');
       } else {
         // Compare against baseline
         const comparison = baselineManager.compareWithBaseline(results, baseline);
@@ -80,12 +87,12 @@ async function main() {
 
         // Exit with error code if new issues found
         if (args.check && comparison.summary.totalNew > 0) {
-          console.log('\n❌ New unused imports detected beyond baseline!');
+          console.log('\n[ERROR] New unused imports detected beyond baseline!');
           process.exit(1);
         }
 
         if (comparison.summary.totalNew === 0) {
-          console.log('\n✓ All checks passed!');
+          console.log('\n[SUCCESS] All checks passed!');
           process.exit(0);
         }
       }
@@ -169,7 +176,148 @@ CONFIGURATION:
 EXIT CODES:
   0 - Success (no unused imports or successfully fixed)
   1 - Failure (unused imports found in check mode or error occurred)
+
+ANALYTICS:
+  --analytics                    Generate team analytics report
+  --analytics-output=<file>      Save analytics report to file (default: stdout)
+
+  # Generate analytics report
+  importlens-cli --analytics src/
+
+  # Save to file
+  importlens-cli --analytics --analytics-output=analytics-report.json src/
 `);
+}
+
+async function generateAnalyticsReport(
+  files: string[],
+  results: any[],
+  outputPath?: string
+): Promise<void> {
+  const analytics = new TeamAnalyticsEngine();
+
+  console.log('Generating team analytics...\n');
+
+  // Process each file result
+  for (const result of results) {
+    const totalImports = countImportsInFile(result.filePath);
+    const unusedImports = result.unusedImports.length;
+    const healthScore = HealthScoreCalculator.calculateFileScore(
+      totalImports,
+      unusedImports
+    );
+
+    // Detect language from file extension
+    const ext = path.extname(result.filePath);
+    const languageMap: Record<string, string> = {
+      '.ts': 'TypeScript',
+      '.tsx': 'TypeScript React',
+      '.js': 'JavaScript',
+      '.jsx': 'JavaScript React',
+      '.py': 'Python',
+      '.java': 'Java',
+      '.go': 'Go',
+      '.rs': 'Rust',
+      '.cpp': 'C++',
+      '.c': 'C',
+    };
+    const language = languageMap[ext] || 'Unknown';
+
+    analytics.addFileMetric({
+      filePath: result.filePath,
+      language,
+      totalImports,
+      unusedImports,
+      healthScore,
+      lastAnalyzed: new Date(),
+    });
+  }
+
+  // Generate dashboard data
+  const dashboard = analytics.generateDashboard();
+
+  // Format report
+  const report = {
+    generatedAt: new Date().toISOString(),
+    projectName: path.basename(process.cwd()),
+    summary: {
+      overallHealthScore: dashboard.healthScore.overallScore,
+      totalFiles: dashboard.healthScore.totalFiles,
+      totalImports: dashboard.healthScore.totalImports,
+      unusedImports: dashboard.healthScore.unusedImports,
+      trend: dashboard.healthScore.trend,
+    },
+    languageBreakdown: dashboard.languageBreakdown,
+    topImprovedFiles: dashboard.topImprovedFiles.slice(0, 10),
+    filesNeedingAttention: dashboard.bottomFiles.slice(0, 10),
+    fileMetrics: analytics.getAllFileMetrics(),
+  };
+
+  const jsonReport = JSON.stringify(report, null, 2);
+
+  // Output report
+  if (outputPath) {
+    fs.writeFileSync(outputPath, jsonReport);
+    console.log(`[SUCCESS] Analytics report saved to ${outputPath}`);
+  } else {
+    console.log(jsonReport);
+  }
+
+  // Print summary to stderr so it doesn't interfere with JSON output
+  console.error(`
+═══════════════════════════════════════════════════════════
+TEAM ANALYTICS SUMMARY
+═══════════════════════════════════════════════════════════
+
+Overall Health Score: ${dashboard.healthScore.overallScore}/100
+
+Files Analyzed: ${dashboard.healthScore.totalFiles}
+Total Imports: ${dashboard.healthScore.totalImports}
+Unused Imports: ${dashboard.healthScore.unusedImports}
+
+Top Languages:
+${dashboard.languageBreakdown
+  .slice(0, 5)
+  .map(
+    (lang) =>
+      `  • ${lang.language.padEnd(20)} - ${lang.fileCount} files, ${lang.unusedImportCount} unused (Score: ${lang.healthScore}/100)`
+  )
+  .join('\n')}
+
+Files Needing Attention:
+${dashboard.bottomFiles
+  .slice(0, 5)
+  .map((file) => `  • ${path.basename(file.filePath)} (Score: ${file.healthScore}/100)`)
+  .join('\n')}
+
+═══════════════════════════════════════════════════════════
+`);
+}
+
+function countImportsInFile(filePath: string): number {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const ext = path.extname(filePath);
+
+    // Different import patterns for different languages
+    if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+      return (content.match(/^import\s+/gm) || []).length;
+    } else if (ext === '.py') {
+      return (content.match(/^(import\s+|from\s+.*\s+import\s+)/gm) || []).length;
+    } else if (ext === '.java') {
+      return (content.match(/^import\s+/gm) || []).length;
+    } else if (ext === '.go') {
+      return (content.match(/^import\s+/gm) || []).length;
+    } else if (ext === '.rs') {
+      return (content.match(/^use\s+/gm) || []).length;
+    } else if (['.cpp', '.c'].includes(ext)) {
+      return (content.match(/^#include\s+/gm) || []).length;
+    }
+
+    return 0;
+  } catch (error) {
+    return 0;
+  }
 }
 
 function showVersion() {

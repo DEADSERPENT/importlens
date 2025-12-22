@@ -2,7 +2,7 @@
   "name": "importlens",
   "displayName": "ImportLens",
   "description": "Intelligent import management with AST-based analysis, organization, and CI/CD integration",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
@@ -59,6 +59,10 @@
       {
         "command": "importlens.showStats",
         "title": "ImportLens: Show Import Statistics"
+      },
+      {
+        "command": "importlens.showTeamDashboard",
+        "title": "ImportLens: Show Team Dashboard"
       },
       {
         "command": "importlens.toggleSafeMode",
