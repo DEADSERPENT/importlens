@@ -118,27 +118,76 @@ Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
   }
 
   removeUnusedSymbols(importInfo: ImportInfo, unusedSymbols: string[]): string | null {
-    // Java imports are typically single-class per line
-    // If any symbol is unused, we delete the entire import
-    // (Java doesn't support multi-symbol imports like TypeScript)
-
     if (unusedSymbols.length === 0 || unusedSymbols.length === importInfo.symbols.length) {
-      return null; // Delete entire line
+      return null;
     }
-
-    // For star imports or namespace imports, keep them if any symbol is still used
     if (importInfo.type === 'namespace') {
       return importInfo.fullText;
     }
-
-    // For single imports, if the symbol is in unusedSymbols, delete it
     const symbolsToKeep = importInfo.symbols.filter(s => !unusedSymbols.includes(s));
+    if (symbolsToKeep.length === 0) return null;
+    return importInfo.fullText;
+  }
 
-    if (symbolsToKeep.length === 0) {
-      return null;
+  /**
+   * Organize imports following standard Java convention:
+   * java.* → javax.* → org.* → com.* → other → static imports.
+   * Each group is sorted alphabetically.
+   */
+  organizeImports(content: string): string | null {
+    const lines = content.split('\n');
+    const imports: { text: string; isStatic: boolean; prefix: string }[] = [];
+    let firstImportLine = -1;
+    let lastImportLine = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed.startsWith('import ')) {
+        if (firstImportLine === -1) firstImportLine = i;
+        lastImportLine = i;
+        const isStatic = trimmed.startsWith('import static ');
+        const pathMatch = trimmed.match(/^import\s+(?:static\s+)?([\w.*]+)\s*;?/);
+        const prefix = pathMatch ? pathMatch[1].split('.')[0] : '';
+        const normalized = trimmed.endsWith(';') ? trimmed : trimmed + ';';
+        imports.push({ text: normalized, isStatic, prefix });
+      } else if (firstImportLine !== -1 && trimmed !== '' && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
+        break;
+      }
     }
 
-    // Java imports are single-class, so if we're keeping it, return as-is
-    return importInfo.fullText;
+    if (imports.length === 0) return null;
+
+    const ORDERED_PREFIXES = ['java', 'javax', 'org', 'com'];
+    const groups = new Map<string, string[]>();
+    const otherImports: string[] = [];
+    const staticImports: string[] = [];
+
+    for (const imp of imports) {
+      if (imp.isStatic) {
+        staticImports.push(imp.text);
+      } else if (ORDERED_PREFIXES.includes(imp.prefix)) {
+        const group = groups.get(imp.prefix) ?? [];
+        group.push(imp.text);
+        groups.set(imp.prefix, group);
+      } else {
+        otherImports.push(imp.text);
+      }
+    }
+
+    for (const g of groups.values()) g.sort();
+    otherImports.sort();
+    staticImports.sort();
+
+    const allGroups: string[][] = [
+      ...ORDERED_PREFIXES.map(p => groups.get(p) ?? []),
+      otherImports,
+      staticImports,
+    ].filter(g => g.length > 0);
+
+    const organized = allGroups.map(g => g.join('\n')).join('\n\n');
+    const before = lines.slice(0, firstImportLine).join('\n');
+    const after = lines.slice(lastImportLine + 1).join('\n');
+
+    return [before, organized, after].filter(p => p.trim() !== '').join('\n\n');
   }
 }

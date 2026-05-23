@@ -2,7 +2,7 @@
   "name": "importlens",
   "displayName": "ImportLens",
   "description": "Intelligent import management with AST-based analysis, organization, and CI/CD integration",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "publisher": "SAMARTHASMG14",
   "license": "MIT",
   "icon": "icon.png",
@@ -199,6 +199,13 @@
     "@babel/traverse": "^7.28.5",
     "@babel/types": "^7.28.5",
     "fast-glob": "^3.3.2"
+  },
+  "optionalDependencies": {
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-go": "^0.21.0",
+    "tree-sitter-java": "^0.21.0",
+    "tree-sitter-python": "^0.21.0",
+    "tree-sitter-rust": "^0.21.1"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",

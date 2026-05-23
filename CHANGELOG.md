@@ -5,6 +5,64 @@ All notable changes to ImportLens will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-05-23
+
+### Git Integration for Team Analytics
+
+- Developer contribution metrics now populated from `git log` history
+- `TeamAnalyticsEngine.loadGitContributors(workspaceRoot)` resolves each file's primary author
+- `DeveloperMetric` fields (`filesOwned`, `averageHealthScore`, `mostImprovedFiles`, `contribution`) are live data
+- Team Dashboard automatically shows top contributors when workspace is a git repo
+- Silent no-op when git is unavailable or workspace is not a repository
+
+### Cross-Language Organize Imports
+
+- `ImportLens: Organize Imports` command now supports **Python**, **Java**, and **Go** in addition to TypeScript/JavaScript
+- Python: PEP 8 groups (`__future__` → stdlib → third-party → local), each group sorted alphabetically
+- Java: standard package groups (`java.*` → `javax.*` → `org.*` → `com.*` → other → static), sorted per group
+- Go: stdlib → third-party split with a blank line, consolidated into a single `import(...)` block
+- Added optional `organizeImports(content)` method to `LanguageAdapter` interface
+
+### Universal AST Parsing via Tree-sitter
+
+- New `TreeSitterAnalyzer` class provides AST-level import detection for Python, Java, Go, and Rust in the CLI
+- Eliminates regex false-positives caused by import symbols appearing inside strings or comments
+- Correctly handles multiline imports in all supported languages
+- Tree-sitter grammars are **optional dependencies** — CLI falls back to existing regex heuristics when packages are absent
+- Install all grammars: `npm install --save-optional tree-sitter tree-sitter-python tree-sitter-java tree-sitter-go tree-sitter-rust`
+
+### High-Performance Parallel CLI Execution
+
+- `CLIAnalyzer.analyzeFiles()` now distributes work across Node.js worker threads for file sets ≥ 8
+- Worker count auto-scales to logical CPU count (`os.cpus().length`)
+- New `AnalyzerWorker.ts` provides the isolated per-worker analysis script
+- Sequential fallback preserved automatically when workers are unavailable
+- Benchmark: linear speedup on multi-core machines for large monorepos
+
+### Technical
+
+**New Files**
+- `src/cli/TreeSitterAnalyzer.ts` — Tree-sitter based import analyzer
+- `src/cli/AnalyzerWorker.ts` — Worker thread entry point
+
+**Modified Files**
+- `src/analytics/TeamAnalytics.ts` — `GitIntegration` class, `loadGitContributors`, `getTopContributors`, updated `generateDashboard`
+- `src/cli/CLIAnalyzer.ts` — Worker thread pool, `TreeSitterAnalyzer` integration, C/C++ header heuristics
+- `src/adapters/LanguageAdapter.ts` — Optional `organizeImports` method added to interface
+- `src/adapters/PythonAdapter.ts` — `organizeImports` implementation (PEP 8)
+- `src/adapters/JavaAdapter.ts` — `organizeImports` implementation (package groups)
+- `src/adapters/GoAdapter.ts` — `organizeImports` implementation (stdlib/third-party split)
+- `src/extension.ts` — `organizeImports` command extended to all adapter-supported languages
+- `src/ui/TeamDashboardPanel.ts` — Passes workspace root for git contributor resolution
+- `package.json` — Version 3.2.0, optional tree-sitter dependencies
+
+### Backward Compatibility
+
+- Fully backward compatible with v3.1.x
+- All existing CLI flags and VS Code commands unchanged
+- Tree-sitter is opt-in (optional dependency); existing regex analysis unchanged when absent
+- Worker threads have automatic sequential fallback
+
 ## [3.1.0] - 2025-12-22
 
 ### Major Features - Phase 6: Enhanced Team Analytics

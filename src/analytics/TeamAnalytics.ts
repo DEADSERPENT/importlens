@@ -3,6 +3,8 @@
  * Provides workspace-wide insights and team health metrics for ImportLens
  */
 
+import { execSync } from 'child_process';
+
 export interface FileHealthMetric {
   filePath: string;
   language: string;
@@ -128,11 +130,66 @@ export class HealthScoreCalculator {
 }
 
 /**
+ * Git integration for resolving file authorship via git log.
+ * All operations are best-effort and silent on failure.
+ */
+class GitIntegration {
+  static isGitRepo(workspaceRoot: string): boolean {
+    try {
+      execSync('git rev-parse --git-dir', {
+        cwd: workspaceRoot,
+        stdio: 'pipe',
+        timeout: 3000,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns a map of author name → commit count for the given file.
+   * Uses git log for speed; a commit-weighted count approximates ownership.
+   */
+  static getFileAuthorCounts(filePath: string, workspaceRoot: string): Map<string, number> {
+    const counts = new Map<string, number>();
+    try {
+      const output = execSync(
+        `git log --follow --format="%an" -- "${filePath}"`,
+        { cwd: workspaceRoot, encoding: 'utf-8', stdio: 'pipe', timeout: 5000 }
+      );
+      for (const line of output.trim().split('\n')) {
+        const author = line.trim();
+        if (author && author !== 'Not Committed Yet') {
+          counts.set(author, (counts.get(author) || 0) + 1);
+        }
+      }
+    } catch {
+      // git not available or file not tracked
+    }
+    return counts;
+  }
+
+  /** Returns the author with the highest commit count for a file, or null. */
+  static getPrimaryAuthor(filePath: string, workspaceRoot: string): string | null {
+    const counts = this.getFileAuthorCounts(filePath, workspaceRoot);
+    if (counts.size === 0) return null;
+    let primary: string | null = null;
+    let max = 0;
+    for (const [author, count] of counts) {
+      if (count > max) { max = count; primary = author; }
+    }
+    return primary;
+  }
+}
+
+/**
  * Team Analytics Engine
  * Aggregates and analyzes data across the entire workspace
  */
 export class TeamAnalyticsEngine {
   private fileMetrics: Map<string, FileHealthMetric> = new Map();
+  private developerMetrics: Map<string, DeveloperMetric> = new Map();
 
   /**
    * Add or update a file metric
@@ -226,14 +283,76 @@ export class TeamAnalyticsEngine {
   }
 
   /**
-   * Generate complete dashboard data
+   * Populate developerMetrics by resolving each file's primary author via git log.
+   * No-ops silently when the workspace is not a git repository.
    */
-  generateDashboard(previousScore?: number): TeamDashboardData {
+  loadGitContributors(workspaceRoot: string): void {
+    if (!GitIntegration.isGitRepo(workspaceRoot)) return;
+
+    const authorData = new Map<string, {
+      filesOwned: number;
+      totalUnusedImports: number;
+      totalScore: number;
+      improvedFiles: string[];
+    }>();
+
+    for (const [filePath, metric] of this.fileMetrics.entries()) {
+      const author = GitIntegration.getPrimaryAuthor(filePath, workspaceRoot);
+      if (!author) continue;
+
+      const data = authorData.get(author) ?? {
+        filesOwned: 0, totalUnusedImports: 0, totalScore: 0, improvedFiles: [],
+      };
+
+      data.filesOwned++;
+      data.totalUnusedImports += metric.unusedImports;
+      data.totalScore += metric.healthScore;
+      if (metric.trend === 'improving') {
+        data.improvedFiles.push(filePath);
+      }
+
+      authorData.set(author, data);
+    }
+
+    this.developerMetrics.clear();
+    for (const [author, data] of authorData.entries()) {
+      const avgScore = data.filesOwned > 0 ? Math.round(data.totalScore / data.filesOwned) : 0;
+      const contribution: 'high' | 'medium' | 'low' =
+        avgScore >= 80 ? 'high' : avgScore >= 60 ? 'medium' : 'low';
+
+      this.developerMetrics.set(author, {
+        author,
+        filesOwned: data.filesOwned,
+        totalUnusedImports: data.totalUnusedImports,
+        averageHealthScore: avgScore,
+        mostImprovedFiles: data.improvedFiles.slice(0, 3),
+        contribution,
+      });
+    }
+  }
+
+  /**
+   * Return top contributors sorted by average health score (best first).
+   */
+  getTopContributors(limit: number = 5): DeveloperMetric[] {
+    return Array.from(this.developerMetrics.values())
+      .sort((a, b) => b.averageHealthScore - a.averageHealthScore)
+      .slice(0, limit);
+  }
+
+  /**
+   * Generate complete dashboard data.
+   * Pass workspaceRoot to enable git-powered contributor metrics.
+   */
+  generateDashboard(previousScore?: number, workspaceRoot?: string): TeamDashboardData {
+    if (workspaceRoot) {
+      this.loadGitContributors(workspaceRoot);
+    }
     return {
       healthScore: this.calculateTeamHealth(previousScore),
       languageBreakdown: this.calculateLanguageBreakdown(),
       topImprovedFiles: this.getTopImprovedFiles(5),
-      topContributors: [], // Will be implemented when git integration is added
+      topContributors: this.getTopContributors(5),
       bottomFiles: this.getBottomFiles(5),
     };
   }
@@ -243,5 +362,6 @@ export class TeamAnalyticsEngine {
    */
   clear(): void {
     this.fileMetrics.clear();
+    this.developerMetrics.clear();
   }
 }

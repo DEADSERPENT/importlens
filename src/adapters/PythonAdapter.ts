@@ -1,6 +1,27 @@
 import * as vscode from 'vscode';
 import { LanguageAdapter, ImportInfo } from './LanguageAdapter';
 
+// Common Python standard library top-level modules (Python 3)
+const PYTHON_STDLIB = new Set([
+  'abc', 'ast', 'asyncio', 'base64', 'binascii', 'bisect', 'builtins',
+  'calendar', 'cgi', 'cmd', 'code', 'codecs', 'collections', 'concurrent',
+  'configparser', 'contextlib', 'copy', 'csv', 'ctypes', 'curses',
+  'dataclasses', 'datetime', 'decimal', 'difflib', 'email', 'enum',
+  'errno', 'faulthandler', 'fileinput', 'fnmatch', 'fractions', 'ftplib',
+  'functools', 'gc', 'getopt', 'getpass', 'glob', 'gzip', 'hashlib',
+  'heapq', 'hmac', 'html', 'http', 'imaplib', 'importlib', 'inspect',
+  'io', 'ipaddress', 'itertools', 'json', 'keyword', 'linecache',
+  'locale', 'logging', 'lzma', 'math', 'mimetypes', 'multiprocessing',
+  'numbers', 'operator', 'os', 'pathlib', 'pickle', 'platform', 'pprint',
+  'profile', 'pstats', 'queue', 'random', 're', 'readline', 'shlex',
+  'shutil', 'signal', 'socket', 'socketserver', 'sqlite3', 'ssl',
+  'stat', 'statistics', 'string', 'struct', 'subprocess', 'sys',
+  'tarfile', 'tempfile', 'textwrap', 'threading', 'time', 'timeit',
+  'tkinter', 'traceback', 'types', 'typing', 'unicodedata', 'unittest',
+  'urllib', 'uuid', 'venv', 'warnings', 'weakref', 'xml', 'xmlrpc',
+  'zipfile', 'zipimport', 'zlib',
+]);
+
 /**
  * Language adapter for Python
  * Handles Python import statements: import, from...import
@@ -212,11 +233,95 @@ Safe to remove: ${!hasSideEffects ? 'Yes' : 'Only in Aggressive Mode'}`;
         return importInfo.fullText;
 
       case 'side-effect':
-        // Side-effect imports don't have symbols
         return importInfo.fullText;
 
       default:
         return null;
     }
+  }
+
+  /**
+   * Organize imports following PEP 8: __future__ → stdlib → third-party → local.
+   */
+  organizeImports(content: string): string | null {
+    const lines = content.split('\n');
+    let firstImportLine = -1;
+    let lastImportLine = -1;
+    const importTexts: string[] = [];
+
+    let i = 0;
+    while (i < lines.length) {
+      const trimmed = lines[i].trim();
+
+      if (trimmed.startsWith('import ') || trimmed.startsWith('from ')) {
+        if (firstImportLine === -1) firstImportLine = i;
+
+        let importText = trimmed;
+        let endLine = i;
+
+        // Collect multiline: from module import (
+        if (trimmed.includes('(') && !trimmed.includes(')')) {
+          while (endLine + 1 < lines.length) {
+            endLine++;
+            importText += ' ' + lines[endLine].trim();
+            if (lines[endLine].includes(')')) break;
+          }
+        }
+
+        importTexts.push(importText.replace(/\s+/g, ' ').trim());
+        lastImportLine = endLine;
+        i = endLine + 1;
+      } else if (firstImportLine !== -1 && trimmed === '') {
+        i++;
+      } else if (firstImportLine !== -1 && !trimmed.startsWith('#')) {
+        break;
+      } else {
+        i++;
+      }
+    }
+
+    if (importTexts.length === 0) return null;
+
+    const futureImports: string[] = [];
+    const stdlibImports: string[] = [];
+    const thirdPartyImports: string[] = [];
+    const localImports: string[] = [];
+
+    for (const text of importTexts) {
+      if (text.includes('__future__')) {
+        futureImports.push(text);
+      } else if (text.startsWith('from .') || text.startsWith('from ..')) {
+        localImports.push(text);
+      } else {
+        const module = this.extractTopLevelModule(text);
+        if (PYTHON_STDLIB.has(module)) {
+          stdlibImports.push(text);
+        } else {
+          thirdPartyImports.push(text);
+        }
+      }
+    }
+
+    [futureImports, stdlibImports, thirdPartyImports, localImports].forEach(g => g.sort());
+
+    const groups = [futureImports, stdlibImports, thirdPartyImports, localImports]
+      .filter(g => g.length > 0);
+
+    if (groups.length === 0) return null;
+
+    const organized = groups.map(g => g.join('\n')).join('\n\n');
+
+    const before = lines.slice(0, firstImportLine).join('\n');
+    const after = lines.slice(lastImportLine + 1).join('\n');
+
+    return [before, organized, after].filter(p => p.trim() !== '').join('\n\n');
+  }
+
+  private extractTopLevelModule(importText: string): string {
+    const fromMatch = importText.match(/^from\s+([\w.]+)/);
+    if (fromMatch) return fromMatch[1].split('.')[0];
+    const importMatch = importText.match(/^import\s+([\w.]+)/);
+    if (importMatch) return importMatch[1].split('.')[0];
+    return '';
   }
 }

@@ -3,96 +3,92 @@
 [![NPM](https://img.shields.io/npm/v/importlens?color=CB3837&logo=npm)](https://www.npmjs.com/package/importlens)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SAMARTHASMG14.importlens?logo=visualstudiocode&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)
 
-**Clean unused imports across multiple languages in VS Code and CI/CD.**
+> Intelligent import management for VS Code and CI/CD pipelines — detect, remove, and organize unused imports with AST-level precision across six languages.
 
-Detects and removes unused imports using AST analysis for TypeScript/JavaScript and LSP for other languages. Features symbol-level precision, baseline tracking, and historical trend visualization.
+## Supported Languages
 
-## Features
-
-**Multi-Language Support** • **Safe Mode** • **Symbol-Level Precision** • **Baseline Tracking** • **Historical Trends** • **Visual Dashboard**
-
-**Supported Languages:**
-
-🟦 **TypeScript/JavaScript** • 🐍 **Python** • ☕ **Java** • 🔵 **Go** • 🦀 **Rust** • ⚙️ **C/C++**
-
-*Plus 50+ additional languages via Language Server Protocol (LSP) support*
+| Language | Detection | Organize Imports |
+|---|---|---|
+| TypeScript / JavaScript | Babel AST | Yes |
+| Python | Tree-sitter / regex | Yes — PEP 8 groups |
+| Java | Tree-sitter / regex | Yes — package groups |
+| Go | Tree-sitter / regex | Yes — stdlib / third-party |
+| Rust | Tree-sitter / regex | — |
+| C / C++ | Heuristic | — |
+| 50+ others | LSP | — |
 
 ## Installation
 
-**VS Code:** Extensions → Search "ImportLens" → Install
+**VS Code** — Extensions panel → search **ImportLens** → Install
 
-**CLI:** `npm install -g importlens`
-
-## Usage
-
-### VS Code Extension
-
-```
-Ctrl+Shift+P → ImportLens: Clean Current File
+**CLI**
+```bash
+npm install -g importlens
 ```
 
-### CLI Tool
+**Enable Tree-sitter (optional, recommended for Python/Java/Go/Rust)**
+```bash
+npm install --save-optional tree-sitter tree-sitter-python tree-sitter-java tree-sitter-go tree-sitter-rust
+```
+
+## VS Code Commands
+
+Open the Command Palette (`Ctrl+Shift+P`) and type **ImportLens**:
+
+- **Clean Current File** — remove unused imports from the active editor
+- **Clean Workspace** — remove unused imports across all open files
+- **Organize Imports** — sort and group imports by language convention
+- **Show Team Dashboard** — workspace health metrics with git contributor data
+- **Show Import Statistics** — historical trend charts
+- **Toggle Safe Mode** — preserve or allow removal of side-effect imports
+
+## CLI
 
 ```bash
-# Check for unused imports
+# Detect unused imports
 importlens-cli --check src/
 
-# Auto-fix with safe mode
+# Auto-fix (safe mode preserves side-effect imports)
 importlens-cli --fix --safe-mode src/
 
-# Baseline workflow (CI/CD)
+# CI/CD — annotate GitHub Actions with inline warnings
+importlens-cli --check --format=github src/
+
+# Baseline workflow — track debt without blocking the pipeline
 importlens-cli --baseline-generate src/
-importlens-cli --check src/
-importlens-cli --baseline-update src/
+importlens-cli --baseline-check src/
+
+# Team analytics report
+importlens-cli --analytics --analytics-output=report.json src/
 ```
 
-## Example
+Output formats: `text` · `json` · `github` · `junit`
 
-```typescript
-// Before
-import React from 'react';
-import { useState, useEffect } from 'react';
-import './styles.css';
+The CLI automatically distributes work across CPU cores using worker threads for faster analysis in large monorepos.
 
-// After (Safe Mode)
-import React from 'react';
-import './styles.css';
-```
+## CI/CD
 
-## CI/CD Integration
-
-**GitHub Actions:**
 ```yaml
-- name: Check unused imports
+- name: ImportLens — check unused imports
   run: |
     npm install -g importlens
     importlens-cli --check --format=github src/
 ```
 
-**Output Formats:** `text` • `json` • `github` • `junit`
-
 ## Configuration
 
-**VS Code:** `settings.json`
 ```json
 {
-  "importlens.enableOnSave": true,
   "importlens.safeMode": true,
-  "importlens.showStatusBar": true
+  "importlens.enableOnSave": false,
+  "importlens.excludePatterns": ["**/node_modules/**", "**/dist/**"]
 }
 ```
 
-**CLI:** `.importlensrc.json` in project root
-
 ## Documentation
 
-- **[User Guide](docs/USER_GUIDE.md)** - Complete usage instructions
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical design
-- **[Vision](docs/VISION.md)** - Project roadmap
-- **[Contributing](CONTRIBUTING.md)** - Development guide
+[User Guide](docs/USER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-## License
+---
 
-MIT © 2025 ImportLens Contributors
-
-**Links:** [GitHub](https://github.com/DEADSERPENT/importlens) • [Issues](https://github.com/DEADSERPENT/importlens/issues) • [NPM](https://www.npmjs.com/package/importlens) • [VSCODE](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)
+MIT License · [GitHub](https://github.com/DEADSERPENT/importlens) · [NPM](https://www.npmjs.com/package/importlens) · [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SAMARTHASMG14.importlens)

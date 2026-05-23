@@ -66,7 +66,8 @@ export class TeamDashboardPanel {
   }
 
   public refresh() {
-    const dashboardData = this.analytics.generateDashboard();
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const dashboardData = this.analytics.generateDashboard(undefined, workspaceRoot);
     this.panel.webview.postMessage({
       command: 'updateData',
       data: this.serializeDashboardData(dashboardData),
@@ -93,7 +94,8 @@ export class TeamDashboardPanel {
   }
 
   private async exportData(format: 'json' | 'csv') {
-    const dashboardData = this.analytics.generateDashboard();
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const dashboardData = this.analytics.generateDashboard(undefined, workspaceRoot);
 
     const saveUri = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.file(`importlens-report-${Date.now()}.${format}`),

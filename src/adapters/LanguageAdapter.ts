@@ -74,6 +74,14 @@ export interface LanguageAdapter {
    * @returns New import text with unused symbols removed, or null to delete the entire line
    */
   removeUnusedSymbols?(importInfo: ImportInfo, unusedSymbols: string[]): string | null;
+
+  /**
+   * Organize imports in the given file content according to language conventions.
+   * Groups and sorts imports (e.g. stdlib → third-party → local for Python).
+   * @param content Full file content
+   * @returns Reorganized file content, or null if organization is not supported / no changes needed
+   */
+  organizeImports?(content: string): string | null;
 }
 
 /**

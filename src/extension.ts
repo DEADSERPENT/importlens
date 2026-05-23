@@ -111,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Register commands
-  registerCommands(context);
+  registerCommands(context, adapterRegistry);
 
   // Register save listener if enabled
   registerSaveListener(context);
@@ -175,7 +175,7 @@ async function updateStatusBar(): Promise<void> {
 /**
  * Register all commands
  */
-function registerCommands(context: vscode.ExtensionContext) {
+function registerCommands(context: vscode.ExtensionContext, adapterRegistry: import('./adapters/LanguageAdapter').LanguageAdapterRegistry) {
   // Command: Clean Current File
   const cleanCurrentFileCommand = vscode.commands.registerCommand(
     'importlens.cleanFile',
@@ -394,56 +394,66 @@ function registerCommands(context: vscode.ExtensionContext) {
         return;
       }
 
-      // Only support TypeScript/JavaScript for now
       const languageId = editor.document.languageId;
-      if (!['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].includes(languageId)) {
-        vscode.window.showWarningMessage('Import organization is only supported for TypeScript and JavaScript files');
-        return;
-      }
+      const content = editor.document.getText();
 
       try {
-        // Import the ASTAnalyzer dynamically
-        const { ASTAnalyzer } = await import('./cli/ASTAnalyzer');
-        const astAnalyzer = new ASTAnalyzer();
+        if (['typescript', 'typescriptreact', 'javascript', 'javascriptreact'].includes(languageId)) {
+          // TypeScript/JavaScript: use Babel AST-based organizer
+          const { ASTAnalyzer } = await import('./cli/ASTAnalyzer');
+          const astAnalyzer = new ASTAnalyzer();
+          const result = astAnalyzer.analyzeTypeScriptFile(content, editor.document.uri.fsPath);
+          const organized = astAnalyzer.organizeImports(result.imports);
+          const newImports = astAnalyzer.generateImportStatements(organized);
 
-        const content = editor.document.getText();
-        const result = astAnalyzer.analyzeTypeScriptFile(content, editor.document.uri.fsPath);
+          const lines = content.split('\n');
+          let firstImportLine = -1;
+          let lastImportLine = -1;
 
-        // Organize imports
-        const organized = astAnalyzer.organizeImports(result.imports);
-        const newImports = astAnalyzer.generateImportStatements(organized);
-
-        // Find the import region in the document
-        const lines = content.split('\n');
-        let firstImportLine = -1;
-        let lastImportLine = -1;
-
-        for (let i = 0; i < lines.length; i++) {
-          const trimmed = lines[i].trim();
-          if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) {
-            if (firstImportLine === -1) {
-              firstImportLine = i;
+          for (let i = 0; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) {
+              if (firstImportLine === -1) firstImportLine = i;
+              lastImportLine = i;
+            } else if (firstImportLine !== -1 && trimmed !== '' && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
+              break;
             }
-            lastImportLine = i;
-          } else if (firstImportLine !== -1 && trimmed !== '' && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
-            // Stop at first non-import, non-empty, non-comment line
-            break;
           }
-        }
 
-        if (firstImportLine === -1) {
-          vscode.window.showInformationMessage('No imports found to organize');
-          return;
-        }
+          if (firstImportLine === -1) {
+            vscode.window.showInformationMessage('No imports found to organize');
+            return;
+          }
 
-        // Replace the import region
-        await editor.edit(editBuilder => {
-          const range = new vscode.Range(
-            new vscode.Position(firstImportLine, 0),
-            new vscode.Position(lastImportLine + 1, 0)
+          await editor.edit(editBuilder => {
+            const range = new vscode.Range(
+              new vscode.Position(firstImportLine, 0),
+              new vscode.Position(lastImportLine + 1, 0)
+            );
+            editBuilder.replace(range, newImports + '\n\n');
+          });
+        } else {
+          // Other languages: delegate to LanguageAdapter.organizeImports
+          const adapter = adapterRegistry.getAdapter(languageId);
+          if (!adapter?.organizeImports) {
+            vscode.window.showWarningMessage(
+              `Import organization is not supported for ${languageId} files`
+            );
+            return;
+          }
+
+          const reorganized = adapter.organizeImports(content);
+          if (!reorganized || reorganized === content) {
+            vscode.window.showInformationMessage('Imports are already organized');
+            return;
+          }
+
+          const fullRange = new vscode.Range(
+            editor.document.positionAt(0),
+            editor.document.positionAt(content.length)
           );
-          editBuilder.replace(range, newImports + '\n\n');
-        });
+          await editor.edit(editBuilder => editBuilder.replace(fullRange, reorganized));
+        }
 
         vscode.window.showInformationMessage('Imports organized successfully!');
       } catch (error) {
